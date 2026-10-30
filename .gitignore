@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# User-generated plans and local storage
+storage/
+
+# Build, tests and logs
+coverage/
+dist/
+*.log
+npm-debug.log*
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

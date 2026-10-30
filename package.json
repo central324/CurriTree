@@ -1,0 +1,18 @@
+{
+  "name": "curritree",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Curriculum roadmap and course planning tool for Kwangwoon University students",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
