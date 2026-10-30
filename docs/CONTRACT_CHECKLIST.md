@@ -25,12 +25,13 @@
 
 | 메서드 | 경로 | 담당 |
 | --- | --- | --- |
-| `GET` | `/api/departments` | 팀원 A |
-| `GET` | `/api/curriculum/:dept` | 팀원 A |
-| `POST` | `/api/validate` | 팀원 B |
-| `POST` | `/api/plans` | 팀원 C |
-| `GET` | `/api/plans/:code` | 팀원 C |
-| `POST` | `/api/ai/plan` | 팀원 C (확장) |
+| `GET` | `/api/departments` | 이태희 |
+| `GET` | `/api/curriculum/:dept` | 이태희 |
+| `POST` | `/api/validate` | 조찬희 |
+| `POST` | `/api/plans` | 박현수 |
+| `GET` | `/api/plans/:code` | 박현수 |
+| `POST` | `/api/ai/condition` | 박현수 |
+| `GET` | `/api/health` | 공통 |
 
 각 API에 대해 다음 항목을 문서화합니다.
 
