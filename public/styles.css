@@ -1,48 +1,399 @@
+/* ==================================================================
+ * CurriTree 공통 스타일
+ *
+ * 모든 페이지가 이 파일을 먼저 불러옵니다.
+ *   1. 디자인 토큰   — 색·글꼴·간격. 색을 바꿀 때는 여기만 고칩니다.
+ *   2. 기본 요소
+ *   3. 공통 레이아웃 — 상단바, 사이드바 (public/layout.js가 만듦)
+ *   4. 공통 컴포넌트 — 버튼, 입력, 칩, 배지
+ *   5. 홈 화면
+ *
+ * 규칙: 페이지 CSS에서는 색 hex 값을 직접 쓰지 말고 var(--color-*)를 씁니다.
+ * 자세한 내용은 docs/DESIGN_GUIDE.md를 참고하세요.
+ * ================================================================== */
+
+/* 1. 디자인 토큰 ---------------------------------------------------- */
 :root {
   color-scheme: light;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #172b23;
-  background: #f5f8f5;
+
+  /* 테마: 아이보리 + 진한 녹색 */
+  --color-bg: #faf7ee; /* 페이지 배경 (아이보리) */
+  --color-surface: #fffdf8; /* 카드·입력창 배경 */
+  --color-ink: #1e2a23; /* 기본 글자 */
+  --color-ink-muted: #5e6b62; /* 보조 글자 */
+  --color-line: #d8d2c2; /* 테두리 */
+  --color-line-soft: #ece7da; /* 구분선, 마우스 올림 배경 */
+  --color-accent: #1f4d3a; /* 주 색 (진한 녹색): 버튼, 선택, 강조 */
+  --color-accent-hover: #173b2c;
+  --color-accent-soft: #e2ebe3; /* 선택된 항목의 옅은 배경 */
+  --color-accent-ink: #ffffff; /* 주 색 위의 글자 */
+  --color-ok: #2e7d4f; /* 충족 */
+  --color-warn: #a86411; /* 주의 */
+  --color-error: #b3392e; /* 미충족, 오류 */
+
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, -apple-system, 'Apple SD Gothic Neo',
+    'Malgun Gothic', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --topbar-height: 56px;
+  --sidebar-width: 260px;
+}
+
+/* 2. 기본 요소 ------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-}
-
-.container {
-  box-sizing: border-box;
-  max-width: 720px;
-  margin: 12vh auto;
-  padding: 32px 24px;
-}
-
-.eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #47715c;
-}
-
-h1 {
-  margin: 12px 0;
-  font-size: clamp(36px, 7vw, 56px);
-}
-
-p {
-  line-height: 1.7;
-}
-
-.notice {
-  margin: 28px 0;
-  padding: 16px 18px;
-  border: 1px solid #d4e4d7;
-  border-radius: 12px;
-  background: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  font-size: 16px;
   line-height: 1.65;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+figure {
+  margin: 0;
 }
 
 a {
-  color: #236f49;
+  color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 3. 공통 레이아웃: 상단바 + 사이드바 -------------------------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-line-soft);
+  background: var(--color-bg);
+}
+
+.topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.menu-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  background: var(--color-line-soft);
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(0 0 0 / 0.25);
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  max-width: 85vw;
+  padding: var(--space-3);
+  border-right: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.sidebar[hidden],
+.sidebar-backdrop[hidden] {
+  display: none;
+}
+
+.sidebar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-2);
+}
+
+.sidebar__list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar__link {
+  display: block;
+  padding: var(--space-2) var(--space-3);
   font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+
+a.sidebar__link:hover {
+  background: var(--color-line-soft);
+}
+
+.sidebar__link[aria-current='page'] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.sidebar__link--disabled {
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
+.sidebar__link small {
+  margin-left: var(--space-1);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* 4. 공통 컴포넌트 -------------------------------------------------- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 38px;
+  padding: 0 var(--space-4);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.button:not(:disabled):hover {
+  border-color: var(--color-ink-muted);
+}
+
+.button--primary {
+  color: var(--color-accent-ink);
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.button--primary:not(:disabled):hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+}
+
+.button--quiet {
+  color: var(--color-ink-muted);
+  border-color: transparent;
+  background: transparent;
+}
+
+.button:disabled {
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button small {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.field select,
+.field input,
+.field textarea {
+  min-height: 38px;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: 15px;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chip {
+  padding: 2px var(--space-3);
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  color: var(--color-accent-ink);
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+/* 이수구분 배지: 전필 / 전선 */
+.type {
+  display: inline-block;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.type--required {
+  color: var(--color-accent);
+}
+
+.type--elective {
+  color: var(--color-ink-muted);
+  border-color: var(--color-line);
+}
+
+/* 5. 홈 화면 -------------------------------------------------------- */
+.home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.home__icon {
+  margin-bottom: var(--space-4);
+  border-radius: 22px;
+}
+
+.home__title {
+  font-size: clamp(44px, 9vw, 72px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--color-accent);
+}
+
+.home__version {
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+/* 하단 개발 상태 표시줄 */
+.dev-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-4);
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.dev-bar a {
+  color: inherit;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-line);
+}
+
+.status[data-status='ok'] .status__dot {
+  background: var(--color-ok);
+}
+
+.status[data-status='error'] .status__dot {
+  background: var(--color-error);
 }

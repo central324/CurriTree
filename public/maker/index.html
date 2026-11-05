@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="커리메이커 — 학기별 수강 계획을 짜고 졸업요건을 바로 확인합니다." />
+    <meta name="theme-color" content="#faf7ee" />
+    <title>커리메이커 | 커리트리</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/maker/maker.css" />
+    <script type="module" src="/layout.js"></script>
+    <script type="module" src="/maker/maker.js"></script>
+  </head>
+  <body class="maker">
+    <main class="workspace">
+      <!-- 1. 기준 정보 -->
+      <section class="setup" aria-labelledby="maker-title">
+        <div class="setup__title">
+          <h1 id="maker-title">커리메이커</h1>
+          <p class="setup__notice">
+            예시 데이터로 만든 화면입니다. 실제 과목과 졸업 기준은 학과 공식 자료를 확인한 뒤 연결합니다.
+          </p>
+        </div>
+        <div class="setup__fields">
+          <label class="field">
+            <span>학과</span>
+            <select id="department" disabled>
+              <option>컴퓨터정보공학부 (예시)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>지금 다니는 학기</span>
+            <select id="current-semester"></select>
+          </label>
+          <button type="button" class="button button--primary" id="import-open">KLAS 수강 내역 불러오기</button>
+        </div>
+      </section>
+
+      <!-- 2. 프리셋 -->
+      <section class="presets" aria-label="프리셋">
+        <div class="presets__tabs" role="tablist" aria-label="저장된 프리셋" id="preset-tabs"></div>
+        <button type="button" class="button button--quiet" id="add-preset">새 프리셋</button>
+        <div class="presets__actions">
+          <label class="field field--inline">
+            <span class="visually-hidden">프리셋 이름</span>
+            <input id="preset-name" type="text" maxlength="20" autocomplete="off" />
+          </label>
+          <button type="button" class="button button--quiet" id="delete-preset">프리셋 삭제</button>
+          <button type="button" class="button" disabled title="계획 저장·공유 기능을 만들고 있습니다">
+            링크로 공유 <small>준비 중</small>
+          </button>
+        </div>
+      </section>
+
+      <div class="maker-grid">
+        <!-- 3. 과목 목록 -->
+        <aside class="library" aria-labelledby="library-title">
+          <h2 id="library-title">과목 담기</h2>
+          <p class="library__target" id="library-target"></p>
+          <div class="library__filters">
+            <label class="field">
+              <span class="visually-hidden">과목 검색</span>
+              <input id="course-search" type="search" placeholder="과목 이름 검색" autocomplete="off" />
+            </label>
+            <div class="chips" role="group" aria-label="이수구분">
+              <button type="button" class="chip" data-type="all" aria-pressed="true">전체</button>
+              <button type="button" class="chip" data-type="전필" aria-pressed="false">전필</button>
+              <button type="button" class="chip" data-type="전선" aria-pressed="false">전선</button>
+            </div>
+            <div class="chips" role="group" aria-label="진로" id="tag-filters"></div>
+          </div>
+          <ul class="course-list" id="course-list"></ul>
+        </aside>
+
+        <!-- 4. 학기별 계획 -->
+        <section class="board" aria-labelledby="board-title">
+          <div class="board__head">
+            <h2 id="board-title">학기별 계획</h2>
+            <p class="board__hint">학기 칸을 눌러 고른 뒤 왼쪽 과목을 누르면 담깁니다. 과목은 끌어서 다른 학기로 옮길 수 있습니다.</p>
+          </div>
+          <div class="board__years" id="board"></div>
+        </section>
+
+        <!-- 5. 졸업요건 -->
+        <aside class="report" aria-labelledby="report-title">
+          <h2 id="report-title" class="visually-hidden">졸업요건 점검</h2>
+          <div class="verdict" id="verdict" role="status" aria-live="polite"></div>
+          <ul class="checks" id="checks"></ul>
+          <p class="report__note">
+            입력한 계획을 기준으로 한 참고 결과입니다. 교양·졸업작품 등 다른 요건은 포함하지 않으며, 최종 확인은 학과 사무실에서 하세요.
+          </p>
+        </aside>
+      </div>
+    </main>
+
+    <!-- KLAS 수강 내역 불러오기 -->
+    <dialog class="import" id="import-dialog" aria-labelledby="import-title">
+      <form method="dialog" class="import__form">
+        <h2 id="import-title">KLAS 수강 내역 불러오기</h2>
+        <ol class="import__steps">
+          <li>KLAS 성적조회 화면에서 학기별 수강 과목 표를 드래그해 복사합니다. 학기 이름 줄도 함께 복사하세요.</li>
+          <li>아래 칸에 붙여 넣고 <strong>내용 확인</strong>을 누릅니다.</li>
+          <li>결과를 확인한 뒤 <strong>이 프리셋에 적용</strong>을 누르면 들은 과목과 수강 중인 과목이 채워지고, 남은 학기는 비워집니다.</li>
+        </ol>
+        <label class="field">
+          <span>복사한 내용</span>
+          <textarea id="import-text" rows="8" spellcheck="false"></textarea>
+        </label>
+        <p class="import__privacy">
+          붙여 넣은 내용은 이 브라우저 안에서만 읽고 서버로 보내지 않습니다. 성적은 저장하지 않고 과목과 학기만 씁니다.
+        </p>
+        <div class="import__preview" id="import-preview" aria-live="polite"></div>
+        <div class="import__actions">
+          <button type="button" class="button button--quiet" id="import-sample">예시 텍스트 넣기</button>
+          <span class="import__spacer"></span>
+          <button type="submit" class="button" value="cancel">취소</button>
+          <button type="button" class="button" id="import-check">내용 확인</button>
+          <button type="button" class="button button--primary" id="import-apply" disabled>이 프리셋에 적용</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>

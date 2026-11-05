@@ -1,0 +1,622 @@
+/* ==================================================================
+ * 커리메이커 화면 전용 스타일
+ * 버튼·입력·칩·배지 같은 공통 요소는 /styles.css에 있습니다.
+ * 색은 var(--color-*) 토큰만 사용합니다.
+ * ================================================================== */
+
+.workspace {
+  flex: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-6) var(--space-12);
+}
+
+/* 1. 기준 정보 ------------------------------------------------------ */
+.setup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-8);
+  padding: var(--space-4) 0;
+}
+
+.setup h1 {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-accent);
+}
+
+.setup__notice {
+  margin-top: var(--space-1);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+.setup__fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+/* 2. 프리셋 ---------------------------------------------------------- */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.presets__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.preset-tab {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.preset-tab:hover {
+  background: var(--color-line-soft);
+}
+
+.preset-tab[aria-selected='true'] {
+  color: var(--color-accent-ink);
+  background: var(--color-accent);
+}
+
+.presets__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.presets__actions input {
+  width: 11em;
+}
+
+/* 3–5. 작업 영역: 과목 목록 | 학기별 계획 | 졸업요건 ----------------- */
+.maker-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-6);
+}
+
+.library,
+.report {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-4));
+}
+
+.library h2,
+.board h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* 3. 과목 목록 */
+.library__target {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.library__target strong {
+  color: var(--color-accent);
+}
+
+.library__filters {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.course-list {
+  display: grid;
+  gap: 2px;
+  max-height: calc(100vh - 320px);
+  min-height: 240px;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.course {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.course:hover {
+  background: var(--color-surface);
+}
+
+.course__name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.course__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.course__status {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.course.is-placed .course__name {
+  color: var(--color-ink-muted);
+}
+
+.course[aria-disabled='true'] {
+  cursor: default;
+}
+
+.course-list__empty {
+  padding: var(--space-4) var(--space-3);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+/* 4. 학기별 계획 */
+.board__hint {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.board__years {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.year {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.year__label {
+  padding-top: var(--space-3);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
+.year__terms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.term {
+  display: flex;
+  flex-direction: column;
+  min-height: 132px;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.term {
+  cursor: pointer;
+}
+
+.term:not(.is-selected):hover {
+  border-color: var(--color-accent);
+}
+
+.term--past {
+  background: var(--color-line-soft);
+}
+
+.term.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.term.is-drop {
+  border-style: dashed;
+  border-color: var(--color-accent);
+}
+
+.term__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.term__select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: inherit;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.term__select:hover {
+  background: var(--color-accent-soft);
+}
+
+.term__badge {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+}
+
+.term--current .term__badge {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.term__credits {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.term__credits.is-over {
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.term__courses {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.term__empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.placed {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0 var(--space-2);
+  padding: 3px 0 3px var(--space-2);
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+}
+
+.placed:hover {
+  background: var(--color-accent-soft);
+}
+
+.placed__progress {
+  margin-left: var(--space-2);
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent-ink);
+  border-radius: 4px;
+  background: var(--color-accent);
+}
+
+.placed__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.placed__warning {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--color-warn);
+}
+
+.placed.has-issue {
+  border-left: 2px solid var(--color-warn);
+}
+
+.placed__remove {
+  width: 28px;
+  height: 28px;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-ink-muted);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.placed__remove:hover {
+  color: var(--color-error);
+}
+
+/* 5. 졸업요건 */
+.verdict {
+  padding: var(--space-4);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.verdict--ok {
+  color: var(--color-ok);
+}
+
+.verdict--fail {
+  color: var(--color-error);
+}
+
+.verdict__label {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.verdict__summary {
+  margin-top: var(--space-1);
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.checks {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-line-soft);
+}
+
+.check__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.check__label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.check__value {
+  font-size: 14px;
+}
+
+.check--met .check__value {
+  color: var(--color-ok);
+}
+
+.check--unmet .check__value {
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.check--unknown .check__value {
+  color: var(--color-warn);
+}
+
+.check__detail,
+.check__list {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.check__list {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--color-line-soft);
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--ratio, 0) * 100%);
+  background: var(--color-error);
+}
+
+.check--met .meter__fill {
+  background: var(--color-ok);
+}
+
+.report__note {
+  margin-top: var(--space-4);
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+/* 6. KLAS 불러오기 대화상자 ----------------------------------------- */
+.import {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  color: var(--color-ink);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.import::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+.import__form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.import h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.import__steps {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 14px;
+}
+
+.import textarea {
+  min-height: 160px;
+  font-size: 13px;
+  font-family: ui-monospace, Consolas, monospace;
+  resize: vertical;
+}
+
+.import__privacy,
+.import__note,
+.import__source {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.import__preview {
+  display: grid;
+  gap: var(--space-2);
+  font-size: 14px;
+}
+
+.import__preview:empty {
+  display: none;
+}
+
+.import__result {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 220px;
+  margin: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+}
+
+.import__warning {
+  color: var(--color-warn);
+}
+
+.import__error {
+  color: var(--color-error);
+}
+
+.import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.import__spacer {
+  flex: 1;
+}
+
+/* 반응형 ------------------------------------------------------------ */
+@media (max-width: 1180px) {
+  .maker-grid {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .report {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    padding-inline: var(--space-4);
+  }
+
+  .maker-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .library {
+    position: static;
+  }
+
+  .course-list {
+    max-height: 280px;
+    min-height: 0;
+  }
+
+  .presets__actions {
+    margin-left: 0;
+  }
+
+  .year {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .year__label {
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .year__terms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
