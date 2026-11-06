@@ -56,18 +56,42 @@ function renderLayout() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
 
+  // 열기: hidden을 풀고 → 다음 그림에서 is-open을 붙여 미끄러져 들어오게 합니다.
+  // 닫기: is-open을 떼서 미끄러져 나가게 한 뒤 → 움직임이 끝나면 hidden을 다시 붙입니다.
+  const SLIDE_MS = 280; // styles.css의 --sidebar-duration과 같은 값
+  let isOpen = false;
+  let hideTimer;
+
   function setOpen(open) {
-    sidebar.hidden = !open;
-    backdrop.hidden = !open;
+    isOpen = open;
+    clearTimeout(hideTimer);
     openButton.setAttribute('aria-expanded', String(open));
-    (open ? closeButton : openButton).focus();
+
+    if (open) {
+      sidebar.hidden = false;
+      backdrop.hidden = false;
+      void sidebar.offsetWidth; // 브라우저가 닫힌 위치를 먼저 그리게 해서 열림 애니메이션이 보이도록 함
+      sidebar.classList.add('is-open');
+      backdrop.classList.add('is-open');
+      closeButton.focus();
+    } else {
+      sidebar.classList.remove('is-open');
+      backdrop.classList.remove('is-open');
+      hideTimer = setTimeout(() => {
+        if (!isOpen) {
+          sidebar.hidden = true;
+          backdrop.hidden = true;
+        }
+      }, SLIDE_MS);
+      openButton.focus();
+    }
   }
 
   openButton.addEventListener('click', () => setOpen(true));
   closeButton.addEventListener('click', () => setOpen(false));
   backdrop.addEventListener('click', () => setOpen(false));
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !sidebar.hidden) setOpen(false);
+    if (event.key === 'Escape' && isOpen) setOpen(false);
   });
 }
 
