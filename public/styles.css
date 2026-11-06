@@ -48,6 +48,7 @@
 
   --topbar-height: 56px;
   --sidebar-width: 260px;
+  --sidebar-duration: 0.28s;
 }
 
 /* 2. 기본 요소 ------------------------------------------------------ */
@@ -145,11 +146,19 @@ a {
   background: var(--color-line-soft);
 }
 
+/* 사이드바 열고 닫기: 왼쪽에서 미끄러져 들어오고, 뒤 배경은 서서히 어두워집니다.
+   시간을 바꾸면 layout.js의 SLIDE_MS도 같이 바꿉니다. */
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
   z-index: 20;
   background: rgb(0 0 0 / 0.25);
+  opacity: 0;
+  transition: opacity var(--sidebar-duration) ease;
+}
+
+.sidebar-backdrop.is-open {
+  opacity: 1;
 }
 
 .sidebar {
@@ -163,6 +172,12 @@ a {
   padding: var(--space-3);
   border-right: 1px solid var(--color-line);
   background: var(--color-surface);
+  transform: translateX(-100%);
+  transition: transform var(--sidebar-duration) cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.sidebar.is-open {
+  transform: none;
 }
 
 .sidebar[hidden],
@@ -214,6 +229,45 @@ a.sidebar__link:hover {
   margin-left: var(--space-1);
   font-size: 12px;
   font-weight: 400;
+}
+
+/* 페이지 전환: 같은 사이트 안에서 다른 페이지로 넘어갈 때 부드럽게 겹쳐 바뀝니다.
+   (View Transitions — Chrome·Edge·Safari 지원, 지원하지 않는 브라우저는 그냥 바로 바뀝니다.) */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: page-out 0.18s ease both;
+}
+
+::view-transition-new(root) {
+  animation: page-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* "동작 줄이기"를 켠 사용자에게는 사이드바·페이지 전환 움직임을 끕니다. */
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+
+  .sidebar,
+  .sidebar-backdrop {
+    transition: none;
+  }
 }
 
 /* 4. 공통 컴포넌트 -------------------------------------------------- */
