@@ -1,3 +1,6 @@
+# EditorConfig — 팀원 모두의 편집기가 같은 코드 서식을 쓰도록 맞춥니다.
+# VS Code는 "EditorConfig for VS Code" 확장을 설치하면 자동 적용됩니다.
+# (색·글꼴 같은 디자인 규칙은 여기가 아니라 public/styles.css와 docs/DESIGN_GUIDE.md에 있습니다.)
 root = true
 
 [*]
@@ -7,6 +10,15 @@ insert_final_newline = true
 indent_style = space
 indent_size = 2
 trim_trailing_whitespace = true
+max_line_length = 120
 
 [*.md]
+# 마크다운은 줄 끝 공백 두 칸이 줄바꿈 의미가 있어 지우지 않습니다.
 trim_trailing_whitespace = false
+max_line_length = off
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

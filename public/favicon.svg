@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 커리트리 아이콘: 녹색 배경 위 흰색 트리 (위 C, 가운데 /\, 아래 양쪽 O) -->
+  <rect width="32" height="32" rx="7" fill="#1f4d3a"/>
+  <g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.2 6.4A4.4 4.4 0 1 0 19.2 12.6"/>
+    <path d="M14.3 14.4 10.4 21.4M17.7 14.4 21.6 21.4"/>
+    <circle cx="9" cy="24.5" r="3"/>
+    <circle cx="23" cy="24.5" r="3"/>
+  </g>
+</svg>
