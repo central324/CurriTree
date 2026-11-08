@@ -17,9 +17,85 @@
   </head>
   <body>
     <main class="home">
+      <!-- 배경 이수표: 전체 이수표 중 가운데를 크게 확대해 흐리게 깔아 둡니다.
+           1학년부터 학년별로 과목 카드 → 연결선 순서로 그려지고 (data-step),
+           다 그려지면 과목에 마우스를 올려 그 과목을 지나는 선수·후속 경로 전체를 강조합니다. 과목은 장식용 예시입니다. -->
+      <div class="roadmap">
+        <svg class="roadmap__svg" viewBox="120 -40 720 340" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+        <g class="roadmap__links">
+          <path class="roadmap__link" data-from="pf" data-to="ds" data-step="2" data-order="0" d="M204 90 C244 90 236 90 276 90" pathLength="1" />
+          <path class="roadmap__link" data-from="pf" data-to="oop" data-step="2" data-order="1" d="M204 90 C244 90 236 150 276 150" pathLength="1" />
+          <path class="roadmap__link" data-from="dm" data-to="ds" data-step="2" data-order="2" d="M204 150 C244 150 236 90 276 90" pathLength="1" />
+          <path class="roadmap__link" data-from="dl" data-to="ca" data-step="2" data-order="3" d="M204 210 C244 210 236 210 276 210" pathLength="1" />
+          <path class="roadmap__link" data-from="ds" data-to="al" data-step="4" data-order="0" d="M444 90 C484 90 476 60 516 60" pathLength="1" />
+          <path class="roadmap__link" data-from="ds" data-to="os" data-step="4" data-order="1" d="M444 90 C484 90 476 120 516 120" pathLength="1" />
+          <path class="roadmap__link" data-from="ds" data-to="db" data-step="4" data-order="2" d="M444 90 C484 90 476 180 516 180" pathLength="1" />
+          <path class="roadmap__link" data-from="oop" data-to="web" data-step="4" data-order="3" d="M444 150 C484 150 476 240 516 240" pathLength="1" />
+          <path class="roadmap__link" data-from="ca" data-to="os" data-step="4" data-order="4" d="M444 210 C484 210 476 120 516 120" pathLength="1" />
+          <path class="roadmap__link" data-from="al" data-to="ai" data-step="6" data-order="0" d="M684 60 C724 60 716 90 756 90" pathLength="1" />
+          <path class="roadmap__link" data-from="os" data-to="sec" data-step="6" data-order="1" d="M684 120 C724 120 716 150 756 150" pathLength="1" />
+          <path class="roadmap__link" data-from="db" data-to="cap" data-step="6" data-order="2" d="M684 180 C724 180 716 210 756 210" pathLength="1" />
+          <path class="roadmap__link" data-from="web" data-to="cap" data-step="6" data-order="3" d="M684 240 C724 240 716 210 756 210" pathLength="1" />
+        </g>
+        <g class="roadmap__course roadmap__course--core" data-id="pf" data-step="1" data-order="0">
+          <rect x="36" y="71" width="168" height="38" rx="10" />
+          <text x="120" y="90">프로그래밍기초</text>
+        </g>
+        <g class="roadmap__course" data-id="dm" data-step="1" data-order="1">
+          <rect x="36" y="131" width="168" height="38" rx="10" />
+          <text x="120" y="150">이산수학</text>
+        </g>
+        <g class="roadmap__course" data-id="dl" data-step="1" data-order="2">
+          <rect x="36" y="191" width="168" height="38" rx="10" />
+          <text x="120" y="210">디지털논리</text>
+        </g>
+        <g class="roadmap__course roadmap__course--core" data-id="ds" data-step="3" data-order="0">
+          <rect x="276" y="71" width="168" height="38" rx="10" />
+          <text x="360" y="90">자료구조</text>
+        </g>
+        <g class="roadmap__course" data-id="oop" data-step="3" data-order="1">
+          <rect x="276" y="131" width="168" height="38" rx="10" />
+          <text x="360" y="150">객체지향프로그래밍</text>
+        </g>
+        <g class="roadmap__course" data-id="ca" data-step="3" data-order="2">
+          <rect x="276" y="191" width="168" height="38" rx="10" />
+          <text x="360" y="210">컴퓨터구조</text>
+        </g>
+        <g class="roadmap__course roadmap__course--core" data-id="al" data-step="5" data-order="0">
+          <rect x="516" y="41" width="168" height="38" rx="10" />
+          <text x="600" y="60">알고리즘</text>
+        </g>
+        <g class="roadmap__course roadmap__course--core" data-id="os" data-step="5" data-order="1">
+          <rect x="516" y="101" width="168" height="38" rx="10" />
+          <text x="600" y="120">운영체제</text>
+        </g>
+        <g class="roadmap__course" data-id="db" data-step="5" data-order="2">
+          <rect x="516" y="161" width="168" height="38" rx="10" />
+          <text x="600" y="180">데이터베이스</text>
+        </g>
+        <g class="roadmap__course" data-id="web" data-step="5" data-order="3">
+          <rect x="516" y="221" width="168" height="38" rx="10" />
+          <text x="600" y="240">웹프로그래밍</text>
+        </g>
+        <g class="roadmap__course" data-id="ai" data-step="7" data-order="0">
+          <rect x="756" y="71" width="168" height="38" rx="10" />
+          <text x="840" y="90">인공지능</text>
+        </g>
+        <g class="roadmap__course" data-id="sec" data-step="7" data-order="1">
+          <rect x="756" y="131" width="168" height="38" rx="10" />
+          <text x="840" y="150">정보보안</text>
+        </g>
+        <g class="roadmap__course roadmap__course--core" data-id="cap" data-step="7" data-order="2">
+          <rect x="756" y="191" width="168" height="38" rx="10" />
+          <text x="840" y="210">캡스톤디자인</text>
+        </g>
+        </svg>
+      </div>
+
       <img class="home__icon" src="/favicon.svg" alt="" width="96" height="96" />
       <h1 class="home__title">커리트리</h1>
-      <p class="home__version">초기 버전</p>
+      <p class="home__tagline">나만의 전공 설계 도우미</p>
+
     </main>
 
     <footer class="dev-bar">
@@ -30,7 +106,6 @@
       <a href="https://github.com/central324/CurriTree">GitHub 저장소</a>
       <a href="https://github.com/central324/CurriTree#8-github-협업-컨벤션-team-convention">협업 규칙</a>
       <a href="https://github.com/central324/CurriTree/blob/main/docs/DESIGN_GUIDE.md">디자인 가이드</a>
-      <p>만든 사람: 이태희, 조찬희, 박현수</p>
     </footer>
   </body>
 </html>
