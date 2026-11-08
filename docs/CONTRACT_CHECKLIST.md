@@ -17,8 +17,8 @@
 | 데이터 형식 | JSON |
 | 스키마 버전 | `schemaVersion: 1` |
 | 필드명 | 영어 camelCase |
-| 과목 식별자 | 교육과정 내부의 고유 `courseId` |
-| 학과 식별자 | 소문자 영문 `departmentId` |
+| 과목 식별자 | 교육과정 과목 객체는 `courses[].id`, 다른 데이터에서 참조할 때는 `courseId` |
+| 학과 식별자 | 학과 객체는 `department.id` 또는 `departments[].id`, 다른 데이터에서 참조할 때는 `departmentId` |
 | 교육과정 식별자 | `curriculumId` |
 | 실제 학기 | `YYYY-1`, `YYYY-2`, `YYYY-S`, `YYYY-W` |
 | 권장 학기 | `1-1` ~ `4-2` |
@@ -28,22 +28,28 @@
 
 ### 1.2 과목 ID 규칙
 
-과목은 과목명이 아니라 `courseId`를 기준으로 관리합니다.
+과목은 과목명이 아니라 고유 ID를 기준으로 관리합니다.
+
+**교육과정 원본의 과목 객체에서는 `id`를 사용하고, 수강 계획·매칭 결과 등 다른 데이터에서 해당 과목을 참조할 때는 `courseId`를 사용합니다.** 두 필드는 값이 동일해야 합니다. `courseId`는 별개의 새 식별자가 아니라 `courses[].id`의 참조 필드입니다.
 
 예시:
 
 ```json
 {
-  "courseId": "demo-ds",
+  "id": "demo-ds",
   "name": "자료구조"
 }
 ```
 
-`courseId`는 교육과정 내부에서 중복되지 않는 고유 값입니다.
+예를 들어 수강 계획에서는 `{ "courseId": "demo-ds" }`로 위 과목을 참조합니다.
 
-과목명이 변경되더라도 동일한 과목으로 확인되면 기존 `courseId`를 유지하고, 과거 명칭은 `aliases`에 추가합니다.
+`courses[].id`는 해당 교육과정 내부에서 중복되지 않는 고유 값입니다.
 
-KLAS 학정번호는 분반 정보가 포함될 수 있으므로 `courseId`와 동일하게 취급하지 않습니다.
+과목명이 변경되더라도 동일한 과목으로 확인되면 기존 `id`를 유지하고, 과거 명칭은 `aliases`에 추가합니다.
+
+학과 ID도 학과 객체 내부에서는 `id`를 사용하고, 이를 다른 객체에서 참조하는 필드가 필요할 때 `departmentId`를 사용합니다. 학과 ID 값은 소문자 영문으로 시작하며 이후 소문자 영문·숫자·하이픈을 허용합니다(예: `ce`).
+
+KLAS 학정번호는 분반 정보가 포함될 수 있으므로 과목의 내부 ID와 동일하게 취급하지 않습니다.
 
 예시:
 
@@ -128,6 +134,25 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
 | `hardPrerequisiteIds` | string[]/null | O | 공식 필수 선수 과목 관계 |
 | `recommendedPreviousIds` | string[] | O | 권장 선행 과목 |
 | `tags` | string[] | O | 진로 태그 |
+
+`aliases`와 `courseCodes`는 필수 필드이지만 확인된 값이 없으면 `[]`을 허용합니다. 해당 필드를 생략하거나 `null`로 두지 않습니다. 비어 있는 `courseCodes`를 임의의 코드로 채우지 않고 과목명 기반 매칭 및 사용자 확인을 사용합니다.
+
+`recommendedTerm`에는 `1-1`부터 `4-2`까지의 권장 학년·학기 문자열 또는 `null`만 사용합니다.
+
+`offeredTerms`에는 교육과정에 표기된 정규·계절학기 구분을 다음 문자열로 저장합니다.
+
+| 값 | 의미 |
+| --- | --- |
+| `"1"` | 1학기 |
+| `"2"` | 2학기 |
+| `"S"` | 하계 계절학기 |
+| `"W"` | 동계 계절학기 |
+
+- 예: `"offeredTerms": ["1", "2"]`
+- `null`: 개설 학기 정보를 아직 확인하지 못함
+- `[]`: 확인된 기준 교육과정 자료에 개설 학기가 표시되지 않음
+
+`offeredTerms`는 `YYYY-1` 같은 실제 수강 학기(`termId`)가 아니라 **개설 학기 유형**을 뜻합니다. 미래 학기의 실제 개설 여부를 보장하지 않으므로 P0에서는 안내용으로 사용하고 수강 계획의 강제 차단 조건으로 사용하지 않습니다.
 
 `hardPrerequisiteIds`와 `recommendedPreviousIds`는 반드시 구분합니다.
 
@@ -274,7 +299,13 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
 
 실제 교육과정 데이터를 등록할 때는 공식 자료 출처와 확인일을 기록해야 합니다.
 
-`isDemo: false`인 데이터는 확인 가능한 출처 URL이 있어야 합니다.
+`source.verifiedAt`은 `YYYY-MM-DD` 형식의 날짜 문자열 또는 `null`입니다(예: `"2026-11-08"`). 확인하지 않은 날짜를 임의로 기입하지 않습니다.
+
+`isDemo: false`인 데이터는 확인 가능한 출처 URL이 있어야 합니다. 검증이 완료된 공식 데이터의 확인 날짜도 `source.verifiedAt`에 기록합니다.
+
+`minimumMajorCredits`는 **전공필수(`major_required`) + 전공선택(`major_elective`)**의 합계에 적용합니다. `minimumMajorElectiveCredits`는 이 중 전공선택 학점만 별도로 검사하며, 같은 전공선택 학점이 두 기준에 모두 기여하는 것은 중복 취득으로 간주하지 않습니다.
+
+교양·기초·일반선택 등의 유효한 취득 학점은 `minimumTotalCredits` 판정에 합산하지만, **교양 필수 과목·교양 영역별 최소 학점 등 별도의 교양 졸업요건 판정은 P0 범위에서 제외**합니다. 따라서 이 서비스의 `met`는 등록된 P0 요건에 대한 참고 판정이며 실제 졸업 확정을 의미하지 않습니다.
 
 ---
 
@@ -591,9 +622,12 @@ HTTP 200
 
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "service": "CurriTree"
 }
 ```
+
+현재 `server/app.js`의 실제 응답 형식과 동일하게 유지합니다.
 
 ---
 
@@ -601,7 +635,7 @@ HTTP 200
 
 **목적**
 
-선택 가능한 학과와 기본 교육과정을 반환합니다.
+선택 가능한 학과, 학과별 교육과정 목록 및 기본 교육과정을 반환합니다.
 
 **요청**
 
@@ -620,13 +654,32 @@ HTTP 200
     {
       "id": "ce",
       "name": "컴퓨터정보공학부",
-      "defaultCurriculumId": "ce-demo-2026"
+      "defaultCurriculumId": "ce-demo-2026",
+      "curricula": [
+        {
+          "id": "ce-demo-2026",
+          "catalogYear": 2026,
+          "admissionYears": [2026],
+          "isDemo": true
+        }
+      ]
     }
   ]
 }
 ```
 
 지원하지 않는 학과는 목록에 포함하지 않습니다.
+
+**응답 필드 규칙**
+
+- `departments[].id`: 학과 고유 ID이며 교육과정 JSON의 `department.id`와 일치
+- `defaultCurriculumId`: 해당 학과에서 기본으로 선택할 교육과정 ID
+- `curricula`: 해당 학과에서 조회 가능한 교육과정 목록
+- `curricula[].id`: 교육과정 JSON의 `curriculumId`와 일치
+- `curricula[].catalogYear`, `admissionYears`, `isDemo`: 해당 교육과정 JSON과 동일한 값
+- `defaultCurriculumId`는 반드시 같은 학과의 `curricula[].id` 중 하나여야 함
+
+P0에서는 학과별 교육과정을 하나만 등록해도 됩니다. 여러 입학년도 데이터가 추가되면 `curricula`에 항목을 늘리고, 사용자가 자신의 입학년도에 적용되는 교육과정을 선택할 수 있도록 합니다. 동일한 입학년도에 여러 교육과정이 적용 가능하면 임의로 확정하지 않고 사용자에게 선택하도록 안내합니다.
 
 ---
 
@@ -652,9 +705,18 @@ HTTP 200
 
 **오류**
 
-- 존재하지 않는 학과: HTTP 404
-- 존재하지 않는 교육과정: HTTP 404
-- 서버 데이터 오류: HTTP 500
+| 상황 | HTTP | 공통 오류 코드 |
+| --- | --- | --- |
+| `:dept`가 학과 ID 형식을 위반함 | 400 | `INVALID_REQUEST` |
+| 학과 ID 형식은 맞지만 등록된 학과가 아님 | 404 | `DEPARTMENT_NOT_FOUND` |
+| `curriculumId` 쿼리의 형식이 잘못됨 | 400 | `INVALID_REQUEST` |
+| 요청한 교육과정이 등록되지 않음 | 404 | `CURRICULUM_NOT_FOUND` |
+| 다른 학과에 속한 `curriculumId`를 요청함 | 404 | `CURRICULUM_NOT_FOUND` |
+| 서버 교육과정 데이터가 손상됨 | 500 | `INTERNAL_ERROR` |
+
+학과 ID 형식은 `^[a-z][a-z0-9-]*$`, 교육과정 ID 형식은 `^[a-z0-9]+(?:-[a-z0-9]+)*$`로 검사합니다. 형식 오류는 400, 형식은 유효하지만 해당 학과 또는 교육과정을 찾을 수 없는 경우는 404로 구분합니다.
+
+`curriculumId`가 존재하더라도 `:dept`와 소속 학과가 다르면 반환하지 않습니다. 상세 오류 응답은 6절의 공통 JSON 형식을 따릅니다.
 
 ---
 
@@ -1053,13 +1115,22 @@ HTTP 200
 ### 9.1 교육과정 데이터
 
 - [ ] 필수 필드가 모두 존재하는 정상 데이터
+- [ ] `courses[].id`와 다른 데이터의 `courseId` 참조 관계 일치
 - [ ] 중복 과목 ID
 - [ ] 존재하지 않는 선수 과목 참조
+- [ ] `recommendedPreviousIds`가 존재하지 않는 과목을 참조하는 경우
+- [ ] `requiredCourseIds`가 존재하지 않는 과목을 참조하는 경우
 - [ ] `hardPrerequisiteIds: null`과 `[]`의 차이 검사
 - [ ] `requiredCourseIds: null`과 `[]`의 차이 검사
 - [ ] 순환 선수 관계
+- [ ] `recommendedTerm`의 허용 형식(`1-1`~`4-2`, `null`) 검사
+- [ ] `offeredTerms` 허용값(`1`, `2`, `S`, `W`) 및 `null`·`[]` 구분 검사
+- [ ] `aliases`, `courseCodes`가 `[]`일 때는 정상이고 `null`이면 오류
 - [ ] 잘못된 이수구분 또는 진로 태그
-- [ ] 공식 자료 출처가 누락된 데이터
+- [ ] `isDemo: false`인데 공식 자료 출처 URL이 누락된 데이터
+- [ ] `source.verifiedAt`의 `YYYY-MM-DD` 날짜 형식 검사
+- [ ] 학과별 `curricula[].id`와 `defaultCurriculumId`의 참조 무결성 검사
+- [ ] `curricula[].admissionYears`가 실제 교육과정 데이터와 일치하는지 확인
 
 ### 9.2 KLAS 텍스트
 
@@ -1112,7 +1183,12 @@ HTTP 200
 ### 9.5 API
 
 - [ ] 정상 요청 및 성공 응답
+- [ ] `/api/health`가 `status`와 `service`를 모두 반환
+- [ ] `/api/departments`가 학과별 `curricula` 목록 반환
 - [ ] 필수 필드 누락
+- [ ] 형식이 잘못된 학과 ID는 HTTP 400 / `INVALID_REQUEST`
+- [ ] 형식은 올바르지만 존재하지 않는 학과는 HTTP 404 / `DEPARTMENT_NOT_FOUND`
+- [ ] 다른 학과에 속한 `curriculumId` 요청은 HTTP 404 / `CURRICULUM_NOT_FOUND`
 - [ ] 존재하지 않는 교육과정
 - [ ] 유효하지 않은 과목 ID
 - [ ] 잘못된 학기 형식
@@ -1163,6 +1239,10 @@ API 계약이 변경될 경우 다른 팀원의 구현 코드에 미치는 영�
 ## 11. 계약 확정 체크리스트
 
 - [x] 교육과정 JSON 스키마 정의
+- [x] 교육과정 `courses[].id`와 참조 필드 `courseId`의 사용 위치 구분
+- [x] 학과 식별자 사용 위치 및 학과별 교육과정 목록 응답 정의
+- [x] 개설 학기·확인 날짜 형식과 미확인 값 처리 정의
+- [x] 전공 학점 합산 범위와 P0 교양 별도 요건 제외 명시
 - [x] 과목 ID 및 학정번호 구분
 - [x] 과목 이수구분 및 진로 태그 정의
 - [x] 실제 학기 및 권장 학기 표현 방식 정의
@@ -1181,6 +1261,8 @@ API 계약이 변경될 경우 다른 팀원의 구현 코드에 미치는 영�
 - [x] 이수요건 검증 결과 구조 정의
 - [x] 미확인 항목이 남아 있을 때 전체 판정 우선순위 정의
 - [x] 공통 오류 응답 및 HTTP 상태 코드 정의
+- [x] 학과·교육과정 조회 오류의 400·404 구분 정의
+- [x] Health API 응답을 실제 서버 구현과 일치시킴
 - [x] 개인정보 보호 원칙 정의
 - [x] 필수 테스트 사례 정의
 
