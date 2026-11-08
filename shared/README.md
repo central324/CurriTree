@@ -12,3 +12,10 @@
 
 함수는 화면 DOM이나 Express의 `request`/`response` 객체에 의존하지 않도록 작성합니다.
 함수 시그니처와 데이터 구조는 팀원 전체가 합의한 후 구현합니다.
+
+## 현재 있는 함수
+
+| 파일 | 내용 |
+| --- | --- |
+| `curriculum/schema.js` | 교육과정 JSON 허용값(이수구분, 진로 태그, ID 형식 등) |
+| `curriculum/validate.js` | `validateCurriculum(data)` — 교육과정 JSON 계약 검사, `[{ field, reason }]` 반환 |
