@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { CURRICULUM_ID_PATTERN, DEPARTMENT_ID_PATTERN } from '../shared/curriculum/schema.js';
 import { loadCurriculumStore } from './curriculum/store.js';
 import { sendError } from './errors.js';
+import { registerValidateRoute } from './maker/validate-route.js';
 
 const defaultCurriculumDir = fileURLToPath(new URL('../data/curricula/', import.meta.url));
 const publicDirectory = fileURLToPath(new URL('../public/', import.meta.url));
@@ -65,6 +66,9 @@ export function createApp({ curriculumDir = defaultCurriculumDir, logger = conso
     }
     response.json(curriculum);
   });
+
+  // 커리큘럼 메이커 이수요건 검증 API (계약 5.7)
+  registerValidateRoute(app, store);
 
   // The actual planner screens will replace the temporary start page.
   app.use(express.static(publicDirectory));
