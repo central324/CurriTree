@@ -1,0 +1,330 @@
+/* KLAS 이수내역 입력 화면 */
+
+.klas {
+  width: min(100% - 32px, 960px);
+  margin: 0 auto;
+  padding: var(--space-12) 0 var(--space-16);
+}
+
+.klas__header {
+  margin-bottom: var(--space-8);
+}
+
+.klas__eyebrow {
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.klas__header h1 {
+  margin-bottom: var(--space-3);
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.klas__description {
+  color: var(--color-ink-muted);
+  line-height: 1.7;
+}
+
+.klas__panel {
+  margin-bottom: var(--space-6);
+  padding: var(--space-6);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.klas__panel[hidden] {
+  display: none;
+}
+
+.klas__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.klas__section-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.klas__step {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.klas__notice {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+}
+
+.klas__notice strong {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-accent);
+  font-size: 14px;
+}
+
+.klas__notice p {
+  color: var(--color-ink-muted);
+  font-size: 13px;
+}
+
+.klas__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.klas__text-field textarea {
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.klas__input-info {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  color: var(--color-ink-muted);
+  font-size: 13px;
+}
+
+.klas__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.klas__message {
+  margin-top: var(--space-4);
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+.klas__message:empty {
+  display: none;
+}
+
+.klas__message--error {
+  color: var(--color-error);
+}
+
+.klas__message--success {
+  color: var(--color-ok);
+}
+
+@media (max-width: 640px) {
+  .klas {
+    padding-top: var(--space-8);
+  }
+
+  .klas__header h1 {
+    font-size: 26px;
+  }
+
+  .klas__panel {
+    padding: var(--space-4);
+  }
+
+  .klas__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .klas__actions .button {
+    flex: 1;
+  }
+}
+
+/* KLAS 파싱 결과 요약 */
+
+.klas__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.klas__summary-item {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.klas__summary-item--warning {
+  color: var(--color-warn);
+}
+
+/* 추출 과목 테이블 */
+
+.klas__table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.klas__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+
+.klas__table th,
+.klas__table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-line-soft);
+  vertical-align: middle;
+}
+
+.klas__table th {
+  font-weight: 700;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  white-space: nowrap;
+}
+
+.klas__table td {
+  color: var(--color-ink);
+}
+
+.klas__row--review {
+  background: var(--color-accent-soft);
+}
+
+/* 파싱 경고 목록 */
+
+.klas__warnings {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+
+.klas__warnings h3 {
+  margin-bottom: var(--space-3);
+  color: var(--color-warn);
+  font-size: 15px;
+}
+
+.klas__warnings ul {
+  margin: 0;
+  padding-left: var(--space-6);
+  color: var(--color-ink-muted);
+  font-size: 13px;
+}
+
+.klas__warnings li + li {
+  margin-top: var(--space-2);
+}
+
+/* 과목 매칭 결과 */
+
+.klas__match--exact {
+  color: var(--color-ok) !important;
+  font-weight: 600;
+}
+
+.klas__match--review {
+  color: var(--color-warn) !important;
+  font-weight: 600;
+}
+
+/* AI 추천 및 사용자 매칭 확인 */
+
+.klas__review-panel {
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.klas__review-panel h3 {
+  margin-bottom: var(--space-2);
+  font-size: 18px;
+}
+
+.klas__review-description {
+  margin-bottom: var(--space-4);
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
+.klas__review-feedback {
+  margin-top: var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
+.klas__review-item {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.klas__review-item h4 {
+  margin: 0 0 var(--space-3);
+  font-size: 16px;
+}
+
+.klas__review-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.klas__review-select {
+  flex: 1;
+  min-width: 200px;
+  min-height: 38px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.klas__recommendation-reasons {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-6);
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.klas__review-complete {
+  margin-top: var(--space-4);
+  color: var(--color-ok);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .klas__review-panel {
+    padding: var(--space-4);
+  }
+
+  .klas__review-controls {
+    flex-direction: column;
+  }
+
+  .klas__review-select {
+    width: 100%;
+  }
+}
