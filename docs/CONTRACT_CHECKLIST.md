@@ -186,16 +186,17 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
 
 ### 2.4 진로 태그
 
-초기 진로 태그는 다음 네 가지로 정의합니다.
+진로 태그는 컴퓨터정보공학부 공식 전공 로드맵의 3개 트랙을 따릅니다.
 
 | 값 | 표시명 |
 | --- | --- |
-| `ai` | AI |
-| `security` | 보안 |
-| `backend` | 백엔드 |
-| `systems` | 시스템 |
+| `bigdata-ai` | 빅데이터 및 인공지능 |
+| `semiconductor-iot` | 반도체 및 IoT |
+| `hw-sw-convergence` | HW/SW 융복합 |
 
-태그는 배열로 관리하며 과목 하나에 여러 태그를 지정할 수 있습니다.
+태그는 배열로 관리하며 과목 하나에 여러 태그를 지정할 수 있습니다. 로드맵에서 여러 트랙에 함께 표시된 과목은 해당 태그를 모두 가집니다.
+
+> 변경 이력: 초안의 `ai`·`security`·`backend`·`systems`를 공식 로드맵 트랙으로 교체했습니다.
 
 ### 2.5 교육과정 JSON 예시
 
@@ -217,7 +218,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
     "url": null,
     "verifiedAt": null
   },
-  "tags": ["ai", "security", "backend", "systems"],
+  "tags": ["bigdata-ai", "semiconductor-iot", "hw-sw-convergence"],
   "courses": [
     {
       "id": "demo-prog",
@@ -230,7 +231,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
       "offeredTerms": null,
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
-      "tags": ["backend"]
+      "tags": ["hw-sw-convergence"]
     },
     {
       "id": "demo-ds",
@@ -243,7 +244,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
       "offeredTerms": null,
       "hardPrerequisiteIds": ["demo-prog"],
       "recommendedPreviousIds": [],
-      "tags": ["backend", "systems"]
+      "tags": ["bigdata-ai", "hw-sw-convergence"]
     },
     {
       "id": "demo-ml",
@@ -256,7 +257,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
       "offeredTerms": null,
       "hardPrerequisiteIds": ["demo-ds"],
       "recommendedPreviousIds": [],
-      "tags": ["ai"]
+      "tags": ["bigdata-ai"]
     }
   ],
   "requirements": {
