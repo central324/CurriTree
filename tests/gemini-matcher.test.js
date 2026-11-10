@@ -237,3 +237,139 @@ test('Empty course lists do not call Gemini', async () => {
   assert.equal(called, false);
   assert.deepEqual(result.results, []);
 });
+
+test('Gemini retries HTTP 503 and succeeds', async () => {
+  let attempts = 0;
+  const delays = [];
+
+  const fetchImpl = async () => {
+    attempts += 1;
+
+    if (attempts === 1) {
+      return {
+        ok: false,
+        status: 503,
+      };
+    }
+
+    return createMockResponse({
+      results: [
+        {
+          clientId: 'local-001',
+          status: 'suggested',
+          candidates: [
+            {
+              courseId: 'demo-ml',
+              confidence: 'high',
+              reason: '과목명이 유사합니다.',
+            },
+          ],
+        },
+      ],
+    });
+  };
+
+  const result = await suggestCourseMatches({
+    unmatchedCourses,
+    curriculum,
+    apiKey: 'test-key',
+    fetchImpl,
+    waitImpl: async (ms) => {
+      delays.push(ms);
+    },
+  });
+
+  assert.equal(attempts, 2);
+  assert.deepEqual(delays, [1000]);
+
+  assert.equal(
+    result.results[0].candidates[0].courseId,
+    'demo-ml'
+  );
+});
+
+test('Gemini stops retrying after repeated HTTP 503 errors', async () => {
+  let attempts = 0;
+  const delays = [];
+
+  const fetchImpl = async () => {
+    attempts += 1;
+
+    return {
+      ok: false,
+      status: 503,
+    };
+  };
+
+  await assert.rejects(
+    suggestCourseMatches({
+      unmatchedCourses,
+      curriculum,
+      apiKey: 'test-key',
+      fetchImpl,
+      waitImpl: async (ms) => {
+        delays.push(ms);
+      },
+    }),
+    LlmUnavailableError
+  );
+
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1000, 2000]);
+});
+
+test('Gemini does not retry HTTP 400 errors', async () => {
+  let attempts = 0;
+
+  const fetchImpl = async () => {
+    attempts += 1;
+
+    return {
+      ok: false,
+      status: 400,
+    };
+  };
+
+  await assert.rejects(
+    suggestCourseMatches({
+      unmatchedCourses,
+      curriculum,
+      apiKey: 'test-key',
+      fetchImpl,
+      waitImpl: async () => {},
+    }),
+    LlmUnavailableError
+  );
+
+  assert.equal(attempts, 1);
+});
+
+test('Gemini retries HTTP 429 errors', async () => {
+  let attempts = 0;
+
+  const fetchImpl = async () => {
+    attempts += 1;
+
+    if (attempts === 1) {
+      return {
+        ok: false,
+        status: 429,
+      };
+    }
+
+    return createMockResponse({
+      results: [],
+    });
+  };
+
+  const result = await suggestCourseMatches({
+    unmatchedCourses,
+    curriculum,
+    apiKey: 'test-key',
+    fetchImpl,
+    waitImpl: async () => {},
+  });
+
+  assert.equal(attempts, 2);
+  assert.equal(result.results[0].status, 'unmatched');
+});

@@ -7,6 +7,20 @@ const VALID_CONFIDENCE = new Set([
   'low',
 ]);
 
+const RETRY_DELAYS_MS = [1000, 2000];
+
+const RETRYABLE_HTTP_STATUSES = new Set([
+  429,
+  500,
+  502,
+  503,
+  504,
+]);
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class LlmUnavailableError extends Error {
   constructor() {
     super('AI 과목 매칭 서비스를 사용할 수 없습니다.');
@@ -165,6 +179,7 @@ export async function suggestCourseMatches({
   apiKey = process.env.GEMINI_API_KEY,
   model = process.env.GEMINI_MODEL || DEFAULT_MODEL,
   fetchImpl = fetch,
+  waitImpl = wait,
 }) {
   if (!Array.isArray(unmatchedCourses)) {
     throw new TypeError('매칭할 과목 목록이 올바르지 않습니다.');
@@ -212,7 +227,7 @@ export async function suggestCourseMatches({
   let upstreamStatus = null;
 
   try {
-    const response = await fetchImpl(url, {
+    const requestOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -234,14 +249,51 @@ export async function suggestCourseMatches({
           responseMimeType: 'application/json',
         },
       }),
+
+      // 전체 재시도 과정에서 동일한 시간 제한을 사용합니다.
       signal: AbortSignal.timeout(20000),
-    });
+    };
 
-    upstreamStatus = response.status;
-    stage = 'http-response';
+    let response;
 
-    if (!response.ok) {
-      throw new LlmUnavailableError();
+    for (
+      let attempt = 0;
+      attempt <= RETRY_DELAYS_MS.length;
+      attempt++
+    ) {
+      stage = 'fetch';
+
+      response = await fetchImpl(url, requestOptions);
+
+      upstreamStatus = response.status ?? null;
+      stage = 'http-response';
+
+      if (response.ok) {
+        break;
+      }
+
+      const canRetry =
+        RETRYABLE_HTTP_STATUSES.has(response.status) &&
+        attempt < RETRY_DELAYS_MS.length &&
+        !requestOptions.signal.aborted;
+
+      if (!canRetry) {
+        throw new LlmUnavailableError();
+      }
+
+      const delayMs = RETRY_DELAYS_MS[attempt];
+
+      if (process.env.GEMINI_DEBUG === '1') {
+        console.error('[Gemini retry]', {
+          attempt: attempt + 1,
+          upstreamStatus: response.status,
+          delayMs,
+        });
+      }
+
+      stage = 'retry-wait';
+
+      await waitImpl(delayMs);
     }
 
     stage = 'response-json';
