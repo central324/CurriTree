@@ -1,5 +1,6 @@
 import { parseKlasText } from './parser.js';
 import { matchParsedCourses } from './matcher.js';
+import { buildMakerPlan } from './plan.js';
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
@@ -860,6 +861,183 @@ function createMatchReviewPanel() {
   return section;
 }
 
+function createMakerPlanPanel() {
+  const section = document.createElement('section');
+  section.className = 'klas__plan-panel';
+
+  section.appendChild(
+    createTextElement(
+      'h3',
+      '',
+      '4. 커리메이커 전달 데이터'
+    )
+  );
+
+  section.appendChild(
+    createTextElement(
+      'p',
+      'klas__plan-description',
+      '확정된 과목과 이수 학점을 정리하여 커리메이커에서 사용할 JSON을 생성합니다.'
+    )
+  );
+
+  const previewButton = document.createElement('button');
+
+  previewButton.type = 'button';
+  previewButton.className = 'button button--primary';
+  previewButton.textContent = '이수내역 정리 결과 확인';
+
+  const output = document.createElement('div');
+  output.className = 'klas__plan-output';
+  output.hidden = true;
+
+  previewButton.addEventListener('click', () => {
+    if (!activeResult) {
+      setMessage('먼저 KLAS 이수내역을 분석해주세요.', 'error');
+      return;
+    }
+
+    try {
+      const result = buildMakerPlan(
+        activeResult.matched.courses,
+        activeResult.curriculum
+      );
+
+      const { plan, reviewPendingRowIds } = result;
+
+      output.replaceChildren();
+
+      const majorCredits = plan.completedCourses.reduce(
+        (sum, course) => sum + course.earnedCredits,
+        0
+      );
+
+      const otherCredits = Object.values(
+        plan.otherEarnedCredits
+      ).reduce((sum, credits) => sum + credits, 0);
+
+      const summary = document.createElement('div');
+      summary.className = 'klas__plan-summary';
+
+      const summaryItems = [
+        `전공 이수 완료: ${plan.completedCourses.length}과목`,
+        `전공 취득 학점: ${majorCredits}학점`,
+        `전공 외 취득 학점: ${otherCredits}학점`,
+        `현재 수강 중: ${plan.inProgressCourses.length}과목`,
+        `확인 필요: ${plan.reviewPendingCount}건`,
+      ];
+
+      for (const item of summaryItems) {
+        summary.appendChild(
+          createTextElement('span', 'klas__summary-item', item)
+        );
+      }
+
+      output.appendChild(summary);
+
+      if (plan.reviewPendingCount > 0) {
+        output.appendChild(
+          createTextElement(
+            'p',
+            'klas__plan-warning',
+            '아직 확인이 필요한 수강 기록이 있습니다. 미확정 항목은 취득 학점에 포함되지 않았습니다.'
+          )
+        );
+
+        const rowMap = new Map(
+          activeResult.matched.courses.map(
+            (row) => [row.clientRowId, row]
+          )
+        );
+
+        const pendingList = document.createElement('ul');
+        pendingList.className = 'klas__plan-pending';
+
+        for (const rowId of reviewPendingRowIds) {
+          const row = rowMap.get(rowId);
+
+          if (!row) {
+            continue;
+          }
+
+          pendingList.appendChild(
+            createTextElement(
+              'li',
+              '',
+              `${row.name} (${row.termId}) — 확인 필요`
+            )
+          );
+        }
+
+        output.appendChild(pendingList);
+      } else {
+        output.appendChild(
+          createTextElement(
+            'p',
+            'klas__plan-success',
+            '미확정 항목 없이 데이터가 정리되었습니다.'
+          )
+        );
+      }
+
+      output.appendChild(
+        createTextElement(
+          'h4',
+          '',
+          '커리메이커 전달 JSON'
+        )
+      );
+
+      const jsonText = JSON.stringify(plan, null, 2);
+
+      const jsonPreview = createTextElement(
+        'pre',
+        'klas__plan-json',
+        jsonText
+      );
+
+      output.appendChild(jsonPreview);
+
+      const copyButton = document.createElement('button');
+
+      copyButton.type = 'button';
+      copyButton.className = 'button';
+      copyButton.textContent = 'JSON 복사';
+
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(jsonText);
+
+          setMessage(
+            '커리메이커 전달용 JSON을 복사했습니다.',
+            'success'
+          );
+        } catch {
+          setMessage(
+            '자동 복사에 실패했습니다. JSON을 직접 선택해 복사해주세요.',
+            'error'
+          );
+        }
+      });
+
+      output.appendChild(copyButton);
+      output.hidden = false;
+    } catch {
+      output.hidden = true;
+
+      setMessage(
+        '이수내역을 정리하지 못했습니다. 입력 데이터와 매칭 결과를 확인해주세요.',
+        'error'
+      );
+    }
+  });
+
+  section.appendChild(previewButton);
+  section.appendChild(output);
+
+  return section;
+}
+
 function renderResults(parsed, matched, curriculum) {
   const courses = matched.courses;
   const reviewIssues = matched.reviewIssues;
@@ -889,6 +1067,12 @@ function renderResults(parsed, matched, curriculum) {
   if (parsed.warnings.length > 0) {
     resultsContainer.appendChild(
       createWarnings(parsed.warnings)
+    );
+  }
+
+  if (activeResult) {
+    resultsContainer.appendChild(
+      createMakerPlanPanel()
     );
   }
 

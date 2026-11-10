@@ -328,3 +328,85 @@
     width: 100%;
   }
 }
+
+/* 커리메이커 전달 데이터 미리보기 */
+
+.klas__plan-panel {
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.klas__plan-panel h3 {
+  margin-bottom: var(--space-2);
+  font-size: 18px;
+}
+
+.klas__plan-description {
+  margin-bottom: var(--space-4);
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
+.klas__plan-output {
+  margin-top: var(--space-6);
+}
+
+.klas__plan-output[hidden] {
+  display: none;
+}
+
+.klas__plan-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.klas__plan-warning {
+  margin-bottom: var(--space-4);
+  color: var(--color-warn);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.klas__plan-success {
+  margin-bottom: var(--space-4);
+  color: var(--color-ok);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.klas__plan-pending {
+  margin: 0 0 var(--space-6);
+  padding-left: var(--space-6);
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
+.klas__plan-output h4 {
+  margin-bottom: var(--space-3);
+  font-size: 16px;
+}
+
+.klas__plan-json {
+  max-height: 400px;
+  overflow: auto;
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+@media (max-width: 640px) {
+  .klas__plan-panel {
+    padding: var(--space-4);
+  }
+}
