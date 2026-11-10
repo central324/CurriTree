@@ -1,0 +1,306 @@
+/* 커리큘럼 메이커 페이지 전체 */
+.maker-page {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+  flex: 1;
+}
+
+/* 페이지 제목 */
+.maker-header {
+  margin-bottom: 32px;
+}
+
+.maker-header h1 {
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 800;
+  color: var(--color-accent);
+  margin-bottom: 8px;
+}
+
+.maker-header p {
+  color: var(--color-ink-muted);
+  font-size: 16px;
+}
+
+/* 공통 영역 카드 */
+.maker-panel,
+.maker-summary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.maker-panel h2,
+.maker-summary h2 {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: 18px;
+}
+
+.maker-panel > p {
+  color: var(--color-ink-muted);
+  margin-bottom: 16px;
+}
+
+/* 교육과정 및 과목 입력 폼 */
+.maker-form-row {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(220px, 100%), 1fr)
+  );
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.maker-form-row .field {
+  min-width: 0;
+  font-weight: 500;
+}
+
+.maker-form-row input,
+.maker-form-row select {
+  width: 100%;
+}
+
+/* 숨겨진 입력 필드가 보이지 않도록 처리 */
+.maker-page [hidden] {
+  display: none !important;
+}
+
+/* 교육과정 안내 메시지 */
+.maker-notice {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* 학점 현황 */
+.maker-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.maker-summary-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.maker-summary-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin-bottom: 12px;
+}
+
+.maker-summary-card p {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+/* 수강 과목 목록 */
+#completed-course-list,
+#in-progress-course-list,
+#planned-terms-list {
+  display: grid;
+  gap: 12px;
+}
+
+#completed-course-list > p,
+#in-progress-course-list > p,
+#planned-terms-list > p {
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
+/* 과목 추가 후 표시할 카드 */
+.maker-course-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+
+.maker-course-info {
+  display: grid;
+  gap: 4px;
+}
+
+.maker-course-info strong {
+  font-size: 15px;
+  color: var(--color-ink);
+}
+
+.maker-course-info small {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* 학기별 수강 계획 카드 */
+.maker-term-card {
+  padding: 20px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+
+.maker-term-card h3 {
+  font-size: 18px;
+  color: var(--color-accent);
+  margin-bottom: 14px;
+}
+
+.maker-term-card .maker-course-card {
+  background: var(--color-surface);
+  margin-bottom: 8px;
+}
+
+/* 과목 등록 메시지 */
+#maker-feedback {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--color-accent);
+}
+
+#maker-feedback:empty {
+  display: none;
+}
+
+/* 검증 결과 영역 */
+#validation-result {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-md);
+}
+
+#validation-result p {
+  color: var(--color-ink-muted);
+  font-size: 14px;
+}
+
+/* 검증 상태 표시 */
+.maker-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.maker-status--met {
+  color: var(--color-ok);
+  background: var(--color-accent-soft);
+}
+
+.maker-status--unmet {
+  color: var(--color-error);
+  background: var(--color-line-soft);
+}
+
+.maker-status--unknown {
+  color: var(--color-warn);
+  background: var(--color-line-soft);
+}
+
+/* 태블릿 화면 */
+@media (max-width: 900px) {
+  .maker-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 스마트폰 화면 */
+@media (max-width: 600px) {
+  .maker-page {
+    padding-top: 24px;
+  }
+
+  .maker-panel,
+  .maker-summary {
+    padding: 16px;
+  }
+
+  .maker-summary-grid {
+    gap: 10px;
+  }
+
+  .maker-summary-card {
+    padding: 14px;
+  }
+
+  .maker-summary-card p {
+    font-size: 20px;
+  }
+
+  .maker-course-card {
+    flex-wrap: wrap;
+  }
+}
+
+/* 과목 이동 및 삭제 버튼 */
+.maker-course-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* 이수요건 검증 결과 */
+#validation-result h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+#validation-result h4 {
+  margin: 20px 0 8px;
+  color: var(--color-ink);
+}
+
+.maker-check-list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.maker-check-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.maker-check-list li p {
+  width: 100%;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+#validation-result > ul:not(.maker-check-list) {
+  padding-left: 20px;
+  color: var(--color-warn);
+  font-size: 14px;
+}
