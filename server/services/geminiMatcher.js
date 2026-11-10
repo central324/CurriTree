@@ -207,6 +207,10 @@ export async function suggestCourseMatches({
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `${encodeURIComponent(model)}:generateContent`;
 
+  const startedAt = Date.now();
+  let stage = 'fetch';
+  let upstreamStatus = null;
+
   try {
     const response = await fetchImpl(url, {
       method: 'POST',
@@ -233,10 +237,14 @@ export async function suggestCourseMatches({
       signal: AbortSignal.timeout(20000),
     });
 
+    upstreamStatus = response.status;
+    stage = 'http-response';
+
     if (!response.ok) {
       throw new LlmUnavailableError();
     }
 
+    stage = 'response-json';
     const responseData = await response.json();
 
     const parts =
@@ -255,8 +263,10 @@ export async function suggestCourseMatches({
       throw new LlmUnavailableError();
     }
 
+    stage = 'model-json';
     const modelOutput = JSON.parse(outputText);
 
+    stage = 'normalization';
     const results = normalizeMatchingResults(
       modelOutput,
       unmatchedCourses,
@@ -267,7 +277,18 @@ export async function suggestCourseMatches({
       schemaVersion: 1,
       results,
     };
-  } catch {
+
+    } catch (error) {
+    if (process.env.GEMINI_DEBUG === '1') {
+      console.error('[Gemini diagnostic]', {
+        stage,
+        upstreamStatus,
+        elapsedMs: Date.now() - startedAt,
+        errorName: error?.name ?? 'UnknownError',
+        causeCode: error?.cause?.code ?? null,
+      });
+    }
+
     throw new LlmUnavailableError();
   }
 }

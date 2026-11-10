@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { CURRICULUM_ID_PATTERN, DEPARTMENT_ID_PATTERN } from '../shared/curriculum/schema.js';
 import { loadCurriculumStore } from './curriculum/store.js';
 import { sendError } from './errors.js';
+import { createAiMatchRouter } from './routes/ai.js';
 
 const defaultCurriculumDir = fileURLToPath(new URL('../data/curricula/', import.meta.url));
 const publicDirectory = fileURLToPath(new URL('../public/', import.meta.url));
@@ -65,7 +66,31 @@ export function createApp({ curriculumDir = defaultCurriculumDir, logger = conso
     }
     response.json(curriculum);
   });
+    // Gemini를 이용한 KLAS 과목 매칭 API
+  // 기존 교육과정 저장소를 사용하여 요청된 교육과정을 조회합니다.
+  app.use('/api/ai', createAiMatchRouter({
+    findCurriculum: (curriculumId) => {
+      // 교육과정 데이터에 오류가 있다면 정상적인 매칭을 진행하지 않습니다.
+      if (store.errors.length > 0) {
+        throw new Error('교육과정 데이터가 유효하지 않습니다.');
+      }
 
+      // 등록된 학과를 순회하며 curriculumId에 해당하는 교육과정을 찾습니다.
+      for (const department of store.departments) {
+        const { curriculum } = store.findCurriculum(
+          department.id,
+          curriculumId
+        );
+
+        if (curriculum) {
+          return curriculum;
+        }
+      }
+
+      // 요청한 교육과정이 존재하지 않는 경우
+      return null;
+    },
+  }));
   // The actual planner screens will replace the temporary start page.
   app.use(express.static(publicDirectory));
 
