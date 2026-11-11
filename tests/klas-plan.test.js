@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { buildMakerPlan } from '../public/klas/plan.js';
 
 const curriculum = {
-  curriculumId: 'ce-2026',
+  curriculumId: 'ce-2023',
   courses: [
     {
       id: 'data-structure-design',

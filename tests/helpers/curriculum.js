@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-export const realCurriculumPath = new URL('../../data/curricula/ce-2026.json', import.meta.url);
+export const realCurriculumPath = new URL('../../data/curricula/ce-2023.json', import.meta.url);
 
 export function loadRealCurriculum() {
   return JSON.parse(readFileSync(realCurriculumPath, 'utf8'));
@@ -47,6 +47,7 @@ export function makeCourse(overrides = {}) {
     offeredTerms: ['1'],
     hardPrerequisiteIds: [],
     recommendedPreviousIds: [],
+    linkedCourseIds: [],
     tags: ['bigdata-ai'],
     ...overrides,
   };

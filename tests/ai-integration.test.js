@@ -87,7 +87,7 @@ test('실제 교육과정에서 매칭 대상이 없으면 정상 응답을 반�
         },
         body: JSON.stringify({
           schemaVersion: 1,
-          curriculumId: 'ce-2026',
+          curriculumId: 'ce-2023',
           unmatchedCourses: [],
         }),
       }

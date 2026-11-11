@@ -7,25 +7,43 @@ import { loadRealCurriculum, makeCourse, makeCurriculum } from './helpers/curric
 const reasons = (data) => validateCurriculum(data).map((error) => `${error.field}: ${error.reason}`);
 const fieldsOf = (data) => validateCurriculum(data).map((error) => error.field);
 
-describe('실제 교육과정 데이터 (data/curricula/ce-2026.json)', () => {
+describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
   const data = loadRealCurriculum();
 
   test('계약을 모두 지킨다', () => {
     assert.deepEqual(reasons(data), []);
   });
 
-  test('편성표 합계 115학점, 43과목과 일치한다', () => {
-    assert.equal(data.courses.length, 43);
+  test('2023학년도 교과과정표 42과목·113학점 + 공학설계입문(이수체계도 필수 선수)', () => {
+    const tableCourses = data.courses.filter((course) => course.id !== 'eng-design-intro');
+    assert.equal(tableCourses.length, 42);
     assert.equal(
-      data.courses.reduce((sum, course) => sum + course.credits, 0),
-      115,
+      tableCourses.reduce((sum, course) => sum + course.credits, 0),
+      113,
     );
   });
 
-  test('모든 과목이 3개 트랙 중 하나 이상에 속한다', () => {
-    for (const course of data.courses) {
+  test('26년 로드맵에 없는 인공지능프로그래밍 외에는 모두 3개 트랙 중 하나 이상에 속한다', () => {
+    for (const course of data.courses.filter((item) => item.id !== 'ai-programming')) {
       assert.ok(course.tags.length > 0, course.id);
     }
+  });
+
+  test('이수체계도의 필수 선수 관계(빨간 화살표)를 담는다', () => {
+    const hard = Object.fromEntries(data.courses.map((course) => [course.id, course.hardPrerequisiteIds]));
+    assert.deepEqual(hard['digital-logic-2'], ['digital-logic-1']);
+    assert.deepEqual(hard['oop-design'], ['eng-design-intro']);
+    assert.deepEqual(hard['capstone-1'], ['oop-design']);
+    assert.deepEqual(hard['sw-project-1'], ['oss-design-lab']);
+    // 선수 과목(대학수학및연습2)이 데이터에 없어 미확인
+    assert.equal(hard['signals-systems'], null);
+  });
+
+  test('설계·실습 연계 과목은 양쪽에 서로 등록되어 있다', () => {
+    const linked = Object.fromEntries(data.courses.map((course) => [course.id, course.linkedCourseIds]));
+    assert.deepEqual(linked['oop-design'], ['oop-lab']);
+    assert.deepEqual(linked['oop-lab'], ['oop-design']);
+    assert.deepEqual(linked['data-structure-design'], ['data-structure-lab']);
   });
 
   test('전공필수 과목은 모두 requiredCourseIds에 있다', () => {
@@ -76,7 +94,7 @@ describe('오류 데이터', () => {
       delete data[field];
       assert.ok(fieldsOf(data).includes(field), field);
     }
-    for (const field of ['id', 'name', 'aliases', 'courseCodes', 'credits', 'category', 'recommendedTerm', 'offeredTerms', 'hardPrerequisiteIds', 'recommendedPreviousIds', 'tags']) {
+    for (const field of ['id', 'name', 'aliases', 'courseCodes', 'credits', 'category', 'recommendedTerm', 'offeredTerms', 'hardPrerequisiteIds', 'recommendedPreviousIds', 'linkedCourseIds', 'tags']) {
       const course = makeCourse({ id: 'x' });
       delete course[field];
       const data = makeCurriculum({ courses: [course] });
@@ -98,6 +116,25 @@ describe('오류 데이터', () => {
   test('존재하지 않는 권장 선행 과목', () => {
     const data = makeCurriculum({ courses: [makeCourse({ id: 'a', recommendedPreviousIds: ['ghost'] })] });
     assert.ok(fieldsOf(data).includes('courses[0].recommendedPreviousIds[0]'));
+  });
+
+  test('존재하지 않는 연계 과목', () => {
+    const data = makeCurriculum({ courses: [makeCourse({ id: 'a', linkedCourseIds: ['ghost'] })] });
+    assert.ok(fieldsOf(data).includes('courses[0].linkedCourseIds[0]'));
+  });
+
+  test('연계 과목을 한쪽에만 적으면 오류', () => {
+    const data = makeCurriculum({
+      courses: [makeCourse({ id: 'a', linkedCourseIds: ['b'] }), makeCourse({ id: 'b' })],
+    });
+    assert.ok(fieldsOf(data).includes('courses[0].linkedCourseIds[0]'));
+  });
+
+  test('연계 과목을 양쪽에 적으면 정상', () => {
+    const data = makeCurriculum({
+      courses: [makeCourse({ id: 'a', linkedCourseIds: ['b'] }), makeCourse({ id: 'b', linkedCourseIds: ['a'] })],
+    });
+    assert.deepEqual(reasons(data), []);
   });
 
   test('존재하지 않는 필수 이수 과목', () => {
