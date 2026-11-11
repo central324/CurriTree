@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "curriculumId": "ce-2026",
+  "curriculumId": "ce-2023",
   "department": {
     "id": "ce",
     "name": "컴퓨터정보공학부"
   },
-  "catalogYear": 2026,
+  "catalogYear": 2023,
   "admissionYears": [
-    2026
+    2023
   ],
-  "isDemo": true,
+  "isDemo": false,
   "source": {
-    "title": "컴퓨터정보공학부 공학주제 교과과정표 및 전공 로드맵 (출처 URL·적용 학번 확인 전)",
-    "url": null,
-    "verifiedAt": null
+    "title": "컴퓨터정보공학부 교과과정표(2023학년도)·이수체계도",
+    "url": "https://ce.kw.ac.kr/program/process.php",
+    "verifiedAt": "2026-11-11"
   },
   "tags": [
     "bigdata-ai",
@@ -27,7 +27,7 @@
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
-      "category": "major_elective",
+      "category": "unknown",
       "recommendedTerm": null,
       "offeredTerms": [
         "1",
@@ -35,6 +35,7 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -46,7 +47,7 @@
       "name": "컴퓨터공학입문세미나",
       "aliases": [],
       "courseCodes": [],
-      "credits": 1,
+      "credits": 2,
       "category": "major_elective",
       "recommendedTerm": "1-1",
       "offeredTerms": [
@@ -54,6 +55,7 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -73,6 +75,7 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -80,36 +83,19 @@
       ]
     },
     {
-      "id": "ce-lab-1",
-      "name": "컴퓨터공학기초실험1",
+      "id": "digital-logic-1",
+      "name": "디지털논리회로1",
       "aliases": [],
       "courseCodes": [],
-      "credits": 2,
-      "category": "major_elective",
+      "credits": 3,
+      "category": "major_required",
       "recommendedTerm": "2-1",
       "offeredTerms": [
         "1"
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
-      "tags": [
-        "semiconductor-iot",
-        "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "oop-lab",
-      "name": "객체지향프로그래밍실습",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 1,
-      "category": "major_elective",
-      "recommendedTerm": "2-1",
-      "offeredTerms": [
-        "1"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -120,7 +106,7 @@
       "id": "oop-design",
       "name": "객체지향프로그래밍설계",
       "aliases": [
-        "객체지향프로그래밍및설계"
+        "고급프로그래밍설계"
       ],
       "courseCodes": [],
       "credits": 3,
@@ -129,8 +115,15 @@
       "offeredTerms": [
         "1"
       ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "hardPrerequisiteIds": [
+        "eng-design-intro"
+      ],
+      "recommendedPreviousIds": [
+        "adv-c-programming"
+      ],
+      "linkedCourseIds": [
+        "oop-lab"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -150,23 +143,48 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "semiconductor-iot"
       ]
     },
     {
-      "id": "digital-logic-1",
-      "name": "디지털논리회로1",
+      "id": "ce-lab-1",
+      "name": "컴퓨터공학기초실험1",
       "aliases": [],
       "courseCodes": [],
-      "credits": 3,
-      "category": "major_required",
+      "credits": 2,
+      "category": "major_elective",
       "recommendedTerm": "2-1",
       "offeredTerms": [
         "1"
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": [
+        "semiconductor-iot",
+        "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "oop-lab",
+      "name": "객체지향프로그래밍실습",
+      "aliases": [
+        "고급프로그래밍실습"
+      ],
+      "courseCodes": [],
+      "credits": 1,
+      "category": "major_elective",
+      "recommendedTerm": "2-1",
+      "offeredTerms": [
+        "1"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [],
+      "linkedCourseIds": [
+        "oop-design"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -184,8 +202,35 @@
       "offeredTerms": [
         "2"
       ],
-      "hardPrerequisiteIds": [],
+      "hardPrerequisiteIds": [
+        "digital-logic-1"
+      ],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": [
+        "bigdata-ai",
+        "semiconductor-iot",
+        "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "data-structure-design",
+      "name": "데이터구조설계",
+      "aliases": [],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_required",
+      "recommendedTerm": "2-2",
+      "offeredTerms": [
+        "2"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [
+        "oop-design"
+      ],
+      "linkedCourseIds": [
+        "data-structure-lab"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -204,27 +249,13 @@
         "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "ce-lab-1"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "semiconductor-iot",
         "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "oss-design-lab",
-      "name": "오픈소스소프트웨어설계및실습",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "2-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "bigdata-ai"
       ]
     },
     {
@@ -240,6 +271,7 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "hw-sw-convergence"
       ]
@@ -255,15 +287,16 @@
       "offeredTerms": [
         "2"
       ],
-      "hardPrerequisiteIds": [],
+      "hardPrerequisiteIds": null,
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "semiconductor-iot"
       ]
     },
     {
-      "id": "data-structure-design",
-      "name": "데이터구조설계",
+      "id": "oss-design-lab",
+      "name": "오픈소스소프트웨어설계및실습",
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
@@ -273,11 +306,12 @@
         "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "adv-c-programming"
+      ],
+      "linkedCourseIds": [],
       "tags": [
-        "bigdata-ai",
-        "semiconductor-iot",
-        "hw-sw-convergence"
+        "bigdata-ai"
       ]
     },
     {
@@ -293,41 +327,57 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [
+        "data-structure-design"
+      ],
       "tags": [
         "bigdata-ai",
         "hw-sw-convergence"
       ]
     },
     {
-      "id": "sw-project-1",
-      "name": "소프트웨어프로젝트1",
+      "id": "computer-architecture",
+      "name": "컴퓨터구조",
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
-      "category": "major_elective",
+      "category": "major_required",
       "recommendedTerm": "3-1",
       "offeredTerms": [
         "1"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "digital-logic-2"
+      ],
+      "linkedCourseIds": [
+        "computer-architecture-lab"
+      ],
       "tags": [
-        "bigdata-ai"
+        "bigdata-ai",
+        "semiconductor-iot",
+        "hw-sw-convergence"
       ]
     },
     {
-      "id": "system-programming-lab",
-      "name": "시스템프로그래밍실습",
+      "id": "system-programming",
+      "name": "시스템프로그래밍",
       "aliases": [],
       "courseCodes": [],
-      "credits": 1,
-      "category": "major_elective",
+      "credits": 3,
+      "category": "major_required",
       "recommendedTerm": "3-1",
       "offeredTerms": [
         "1"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "data-structure-design",
+        "assembly-design-lab"
+      ],
+      "linkedCourseIds": [
+        "system-programming-lab"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -347,28 +397,54 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [
+        "computer-architecture"
+      ],
       "tags": [
         "semiconductor-iot",
         "hw-sw-convergence"
       ]
     },
     {
-      "id": "computer-architecture",
-      "name": "컴퓨터구조",
+      "id": "system-programming-lab",
+      "name": "시스템프로그래밍실습",
       "aliases": [],
       "courseCodes": [],
-      "credits": 3,
-      "category": "major_required",
+      "credits": 1,
+      "category": "major_elective",
       "recommendedTerm": "3-1",
       "offeredTerms": [
         "1"
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [
+        "system-programming"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
         "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "signals-systems",
+      "name": "신호및시스템",
+      "aliases": [],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "3-1",
+      "offeredTerms": [
+        "1"
+      ],
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [
+        "ce-lab-2"
+      ],
+      "linkedCourseIds": [],
+      "tags": [
+        "semiconductor-iot"
       ]
     },
     {
@@ -384,13 +460,14 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "hw-sw-convergence"
       ]
     },
     {
-      "id": "signals-systems",
-      "name": "신호및시스템",
+      "id": "sw-project-1",
+      "name": "소프트웨어프로젝트1",
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
@@ -399,25 +476,33 @@
       "offeredTerms": [
         "1"
       ],
-      "hardPrerequisiteIds": [],
+      "hardPrerequisiteIds": [
+        "oss-design-lab"
+      ],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
-        "semiconductor-iot"
+        "bigdata-ai"
       ]
     },
     {
-      "id": "system-programming",
-      "name": "시스템프로그래밍",
+      "id": "operating-systems",
+      "name": "운영체제",
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
       "category": "major_required",
-      "recommendedTerm": "3-1",
+      "recommendedTerm": "3-2",
       "offeredTerms": [
-        "1"
+        "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "system-programming"
+      ],
+      "linkedCourseIds": [
+        "os-lab"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -437,6 +522,9 @@
       ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [
+        "operating-systems"
+      ],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -444,21 +532,23 @@
       ]
     },
     {
-      "id": "operating-systems",
-      "name": "운영체제",
-      "aliases": [],
+      "id": "hw-sw-codesign",
+      "name": "SW/HW통합설계",
+      "aliases": [
+        "하드웨어소프트웨어통합설계",
+        "임베디드시스템H/W설계및실험"
+      ],
       "courseCodes": [],
       "credits": 3,
-      "category": "major_required",
+      "category": "major_elective",
       "recommendedTerm": "3-2",
       "offeredTerms": [
         "2"
       ],
-      "hardPrerequisiteIds": [],
+      "hardPrerequisiteIds": null,
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
-        "bigdata-ai",
-        "semiconductor-iot",
         "hw-sw-convergence"
       ]
     },
@@ -474,77 +564,12 @@
         "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "computer-architecture"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "semiconductor-iot"
-      ]
-    },
-    {
-      "id": "sw-project-2",
-      "name": "소프트웨어프로젝트2",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "3-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "bigdata-ai"
-      ]
-    },
-    {
-      "id": "algorithms",
-      "name": "알고리즘",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "3-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "bigdata-ai"
-      ]
-    },
-    {
-      "id": "hw-sw-codesign",
-      "name": "하드웨어소프트웨어통합설계",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "3-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "data-communication",
-      "name": "데이터통신",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "3-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "hw-sw-convergence"
       ]
     },
     {
@@ -559,14 +584,39 @@
         "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "signals-systems"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "semiconductor-iot"
       ]
     },
     {
-      "id": "gpu-computing",
-      "name": "GPU컴퓨팅",
+      "id": "data-communication",
+      "name": "데이터통신",
+      "aliases": [
+        "데이터통신설계"
+      ],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "3-2",
+      "offeredTerms": [
+        "2"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [
+        "computer-network"
+      ],
+      "linkedCourseIds": [],
+      "tags": [
+        "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "algorithms",
+      "name": "알고리즘",
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
@@ -576,9 +626,12 @@
         "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "data-structure-design"
+      ],
+      "linkedCourseIds": [],
       "tags": [
-        "semiconductor-iot"
+        "bigdata-ai"
       ]
     },
     {
@@ -593,79 +646,52 @@
         "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "data-structure-design"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai"
       ]
     },
     {
-      "id": "system-semiconductor",
-      "name": "시스템반도체설계및응용",
+      "id": "sw-project-2",
+      "name": "소프트웨어프로젝트2",
       "aliases": [],
       "courseCodes": [],
       "credits": 3,
       "category": "major_elective",
-      "recommendedTerm": "4-1",
+      "recommendedTerm": "3-2",
       "offeredTerms": [
-        "1"
+        "2"
+      ],
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [
+        "sw-project-1"
+      ],
+      "linkedCourseIds": [],
+      "tags": [
+        "bigdata-ai"
+      ]
+    },
+    {
+      "id": "gpu-computing",
+      "name": "GPU컴퓨팅",
+      "aliases": [],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "3-2",
+      "offeredTerms": [
+        "2"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "microprocessor"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "semiconductor-iot"
-      ]
-    },
-    {
-      "id": "embedded-system-sw",
-      "name": "임베디드시스템S/W설계",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "4-1",
-      "offeredTerms": [
-        "1"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "wireless-5g",
-      "name": "무선이동네트워크및5G",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "4-1",
-      "offeredTerms": [
-        "1"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "computer-vision",
-      "name": "컴퓨터비젼",
-      "aliases": [
-        "컴퓨터비전"
-      ],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "4-1",
-      "offeredTerms": [
-        "1"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "bigdata-ai"
       ]
     },
     {
@@ -680,9 +706,72 @@
         "1"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "data-structure-design"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
+        "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "wireless-5g",
+      "name": "무선이동네트워크및5G",
+      "aliases": [
+        "무선이동네트워크"
+      ],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-1",
+      "offeredTerms": [
+        "1"
+      ],
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": [
+        "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "computer-vision",
+      "name": "컴퓨터비젼",
+      "aliases": [],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-1",
+      "offeredTerms": [
+        "1"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [
+        "digital-signal-processing"
+      ],
+      "linkedCourseIds": [],
+      "tags": [
+        "bigdata-ai"
+      ]
+    },
+    {
+      "id": "embedded-system-sw",
+      "name": "임베디드시스템S/W설계",
+      "aliases": [],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-1",
+      "offeredTerms": [
+        "1"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [
+        "operating-systems"
+      ],
+      "linkedCourseIds": [],
+      "tags": [
         "hw-sw-convergence"
       ]
     },
@@ -698,7 +787,11 @@
         "1"
       ],
       "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "recommendedPreviousIds": [
+        "algorithms",
+        "artificial-intelligence"
+      ],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai"
       ]
@@ -714,8 +807,95 @@
       "offeredTerms": [
         "1"
       ],
+      "hardPrerequisiteIds": [
+        "oop-design"
+      ],
+      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": [
+        "bigdata-ai",
+        "semiconductor-iot",
+        "hw-sw-convergence"
+      ]
+    },
+    {
+      "id": "ai-soc-design",
+      "name": "AI시스템온칩설계및응용",
+      "aliases": [
+        "시스템반도체설계및응용"
+      ],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-1",
+      "offeredTerms": [
+        "1"
+      ],
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": [
+        "semiconductor-iot"
+      ]
+    },
+    {
+      "id": "ai-programming",
+      "name": "인공지능프로그래밍",
+      "aliases": [],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-2",
+      "offeredTerms": [
+        "2"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [
+        "gpu-computing",
+        "machine-learning"
+      ],
+      "linkedCourseIds": [],
+      "tags": []
+    },
+    {
+      "id": "db-visualization",
+      "name": "데이터베이스및데이터시각화",
+      "aliases": [
+        "데이터베이스및응용"
+      ],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-2",
+      "offeredTerms": [
+        "2"
+      ],
+      "hardPrerequisiteIds": [],
+      "recommendedPreviousIds": [
+        "artificial-intelligence"
+      ],
+      "linkedCourseIds": [],
+      "tags": [
+        "bigdata-ai"
+      ]
+    },
+    {
+      "id": "intelligent-iot",
+      "name": "지능IoT특론",
+      "aliases": [
+        "IoT특론",
+        "차세대IT특론"
+      ],
+      "courseCodes": [],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": "4-2",
+      "offeredTerms": [
+        "2"
+      ],
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -725,7 +905,9 @@
     {
       "id": "capstone-2",
       "name": "산학협력캡스톤설계2",
-      "aliases": [],
+      "aliases": [
+        "캡스톤설계"
+      ],
       "courseCodes": [],
       "credits": 3,
       "category": "major_elective",
@@ -733,61 +915,11 @@
       "offeredTerms": [
         "2"
       ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "bigdata-ai",
-        "semiconductor-iot",
-        "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "hci",
-      "name": "Human Computer Interaction",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "4-2",
-      "offeredTerms": [
-        "2"
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [
+        "capstone-1"
       ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "hw-sw-convergence"
-      ]
-    },
-    {
-      "id": "db-visualization",
-      "name": "데이터베이스및데이터시각화",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "4-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
-      "tags": [
-        "bigdata-ai"
-      ]
-    },
-    {
-      "id": "intelligent-iot",
-      "name": "지능IoT특론",
-      "aliases": [],
-      "courseCodes": [],
-      "credits": 3,
-      "category": "major_elective",
-      "recommendedTerm": "4-2",
-      "offeredTerms": [
-        "2"
-      ],
-      "hardPrerequisiteIds": [],
-      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": [
         "bigdata-ai",
         "semiconductor-iot",
@@ -800,9 +932,10 @@
     "minimumMajorCredits": null,
     "minimumMajorElectiveCredits": null,
     "requiredCourseIds": [
-      "oop-design",
       "digital-logic-1",
+      "oop-design",
       "digital-logic-2",
+      "data-structure-design",
       "computer-architecture",
       "system-programming",
       "operating-systems"

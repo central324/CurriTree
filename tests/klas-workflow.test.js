@@ -7,7 +7,7 @@ import { buildMakerPlan } from '../public/klas/plan.js';
 
 const curriculum = {
   schemaVersion: 1,
-  curriculumId: 'ce-2026',
+  curriculumId: 'ce-2023',
   courses: [
     {
       id: 'data-structure-design',
@@ -190,5 +190,5 @@ test('Final maker payload excludes KLAS source information', () => {
   assert.equal(serialized.includes('rawText'), false);
 
   assert.equal(result.plan.schemaVersion, 1);
-  assert.equal(result.plan.curriculumId, 'ce-2026');
+  assert.equal(result.plan.curriculumId, 'ce-2023');
 });
