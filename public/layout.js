@@ -10,7 +10,7 @@
  */
 export const MENU = [
   { label: '커리메이커', href: '/maker/' },
-  { label: '메뉴1' },
+  { label: 'KLAS 이수내역', href: '/klas/' },
   { label: '메뉴2' },
 ];
 

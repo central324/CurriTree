@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="KLAS 성적조회 내용을 가져와 이수내역을 확인합니다."
+    />
+
+    <title>KLAS 이수내역 가져오기 | 커리트리</title>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/klas/klas.css" />
+
+    <script type="module" src="/layout.js"></script>
+    <script type="module" src="/klas/klas.js"></script>
+  </head>
+
+  <body>
+    <main class="klas">
+      <header class="klas__header">
+        <p class="klas__eyebrow">CURRITREE · KLAS</p>
+
+        <h1>KLAS 이수내역 가져오기</h1>
+
+        <p class="klas__description">
+          KLAS 성적조회 화면에서 복사한 내용을 붙여 넣으면
+          수강 과목을 분석하고 교육과정의 과목과 연결할 수 있습니다.
+        </p>
+      </header>
+
+      <section class="klas__panel" aria-labelledby="klas-input-title">
+        <div class="klas__section-header">
+          <h2 id="klas-input-title">1. 이수내역 입력</h2>
+          <span class="klas__step">STEP 01</span>
+        </div>
+
+        <div class="klas__notice">
+          <strong>개인정보 안내</strong>
+          <p>
+            성적조회 원본은 브라우저에서 처리합니다.
+            학번, 이름, 성적 등의 원본 정보를 AI에 전달하지 않습니다.
+          </p>
+        </div>
+
+        <form id="klas-form">
+          <div class="klas__fields">
+            <label class="field">
+              <span>교육과정</span>
+
+              <select id="curriculum-id" required disabled>
+                <option value="">교육과정을 불러오는 중...</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>현재 학기</span>
+
+              <input
+                id="current-term"
+                type="text"
+                placeholder="2026-2"
+                pattern="[0-9]{4}-(1|2|S|W)"
+                title="2026-1, 2026-2, 2026-S, 2026-W 형식으로 입력하세요."
+                required
+              />
+            </label>
+          </div>
+
+          <label class="field klas__text-field" for="klas-text">
+            <span>KLAS 성적조회 텍스트</span>
+
+            <textarea
+              id="klas-text"
+              rows="12"
+              placeholder="KLAS 성적조회 화면에서 복사한 내용을 여기에 붙여 넣으세요."
+              spellcheck="false"
+              required
+            ></textarea>
+          </label>
+
+          <div class="klas__input-info">
+            <p>
+              여러 학기의 성적조회 내용을 한 번에 붙여 넣을 수 있습니다.
+            </p>
+
+            <span id="text-count">0자 입력</span>
+          </div>
+
+          <div class="klas__actions">
+            <button
+              type="submit"
+              class="button button--primary"
+              id="analyze-button"
+              disabled
+            >
+              입력 내용 확인
+            </button>
+
+            <button
+              type="button"
+              class="button"
+              id="clear-button"
+            >
+              입력 내용 지우기
+            </button>
+          </div>
+
+          <p id="klas-message" class="klas__message" role="status"></p>
+        </form>
+      </section>
+
+      <section
+        class="klas__panel"
+        id="klas-preview"
+        aria-labelledby="klas-preview-title"
+        hidden
+      >
+        <div class="klas__section-header">
+          <h2 id="klas-preview-title">2. 분석 결과 확인</h2>
+          <span class="klas__step">STEP 02</span>
+        </div>
+
+        <p class="klas__description">
+          다음 단계에서 파싱한 과목 목록과 자동 매칭 결과를
+          이 영역에 표시합니다.
+        </p>
+
+        <div id="klas-results"></div>
+      </section>
+    </main>
+  </body>
+</html>
