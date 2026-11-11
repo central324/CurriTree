@@ -1,6 +1,7 @@
 import { parseKlasText } from './parser.js';
 import { matchParsedCourses } from './matcher.js';
 import { buildMakerPlan } from './plan.js';
+import { saveMakerHandoff } from './handoff.js';
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
@@ -1021,6 +1022,40 @@ function createMakerPlanPanel() {
       });
 
       output.appendChild(copyButton);
+
+      const makerButton = document.createElement('button');
+
+      makerButton.type = 'button';
+      makerButton.className = 'button button--primary';
+      makerButton.textContent = '커리메이커에 반영하기';
+
+      makerButton.addEventListener('click', () => {
+        if (plan.reviewPendingCount > 0) {
+          const confirmed = window.confirm(
+            '아직 확인이 필요한 과목이 있습니다.\n' +
+            '미확정 과목은 학점 계산에 포함되지 않습니다.\n\n' +
+            '현재 확정된 과목만 커리메이커로 전달할까요?'
+          );
+
+          if (!confirmed) {
+            return;
+          }
+        }
+
+        try {
+          saveMakerHandoff(window.sessionStorage, plan);
+
+          window.location.assign('/maker/');
+        } catch {
+          setMessage(
+            '커리메이커로 데이터를 전달하지 못했습니다. 다시 시도해주세요.',
+            'error'
+          );
+        }
+      });
+
+      output.appendChild(makerButton);
+
       output.hidden = false;
     } catch {
       output.hidden = true;
