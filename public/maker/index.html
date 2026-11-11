@@ -3,22 +3,256 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="커리메이커 — 학기별 수강 계획을 짜는 화면입니다." />
+    <meta name="description" content="커리메이커 — 학기별 수강 계획 관리" />
     <meta name="theme-color" content="#faf7ee" />
+
     <title>커리메이커 | 커리트리</title>
+
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
     />
+
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/maker/maker.css" />
     <script type="module" src="/layout.js"></script>
+    <script type="module" src="/maker/maker.js"></script>
   </head>
+
   <body>
-    <!-- 커리메이커 기능(과목 목록, 학기별 계획, 졸업요건 등)은 담당 팀원의 별도 Issue·PR에서 구현합니다. -->
-    <main class="home">
-      <h1 class="home__title">커리메이커</h1>
-      <p class="home__version">준비 중</p>
+    <main class="maker-page">
+
+      <!-- 페이지 제목 -->
+      <header class="maker-header">
+        <h1>커리메이커</h1>
+        <p>
+          나만의 학기별 수강 계획을 만들고
+          이수요건을 확인해 보세요.
+        </p>
+      </header>
+
+      <!-- 학과 및 교육과정 선택 -->
+      <section class="maker-panel">
+        <h2>교육과정 선택</h2>
+
+        <div class="maker-form-row">
+          <label class="field">
+            학과
+            <select id="department-select">
+              <option value="">학과 불러오는 중...</option>
+            </select>
+          </label>
+
+          <label class="field">
+            교육과정
+            <select id="curriculum-select">
+              <option value="">교육과정 선택</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="curriculum-notice" class="maker-notice"></p>
+      </section>
+
+      <!-- 학점 현황 -->
+      <section class="maker-summary">
+        <h2>나의 학점 현황</h2>
+
+        <div class="maker-summary-grid">
+          <div class="maker-summary-card">
+            <h3>현재 취득 학점</h3>
+            <p><span id="earned-credits">0</span> 학점</p>
+          </div>
+
+          <div class="maker-summary-card">
+            <h3>수강 중 학점</h3>
+            <p><span id="in-progress-credits">0</span> 학점</p>
+          </div>
+
+          <div class="maker-summary-card">
+            <h3>수강 예정 학점</h3>
+            <p><span id="planned-credits">0</span> 학점</p>
+          </div>
+
+          <div class="maker-summary-card">
+            <h3>예상 총학점</h3>
+            <p><span id="projected-credits">0</span> 학점</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 과목 추가 -->
+      <section class="maker-panel">
+        <h2>수강 과목 등록</h2>
+
+        <form id="course-form">
+          <div class="maker-form-row">
+            <label class="field">
+              과목 검색
+              <input
+                id="course-search"
+                type="search"
+                placeholder="과목명을 검색하세요"
+              />
+            </label>
+
+            <label class="field">
+              과목 선택
+              <select id="course-select" required>
+                <option value="">과목을 선택하세요</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="maker-form-row">
+            <label class="field">
+              수강 상태
+              <select id="course-status">
+                <option value="planned">수강 예정</option>
+                <option value="in_progress">수강 중</option>
+                <option value="completed">이수 완료</option>
+              </select>
+            </label>
+
+            <label class="field">
+              수강 학기
+              <input
+                id="term-input"
+                type="text"
+                placeholder="예: 2027-1"
+                required
+              />
+            </label>
+
+            <label class="field" id="earned-field" hidden>
+              실제 인정 학점
+              <input
+                id="earned-input"
+                type="number"
+                min="0"
+                step="any"
+                placeholder="예: 3"
+              />
+            </label>
+          </div>
+
+          <button type="submit" class="button button--primary">
+            과목 추가하기
+          </button>
+        </form>
+
+        <p id="maker-feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <!-- 이수 완료 과목 -->
+      <section class="maker-panel">
+        <h2>이수 완료 과목</h2>
+        <div id="completed-course-list">
+          <p>등록된 이수 완료 과목이 없습니다.</p>
+        </div>
+      </section>
+
+      <!-- 현재 수강 중인 과목 -->
+      <section class="maker-panel">
+        <h2>현재 수강 중인 과목</h2>
+        <div id="in-progress-course-list">
+          <p>등록된 수강 중 과목이 없습니다.</p>
+        </div>
+      </section>
+
+      <!-- 학기별 수강 계획 -->
+      <section class="maker-panel">
+        <h2>학기별 수강 계획</h2>
+
+        <p>
+          과목을 추가한 뒤 다른 학기로 이동하거나
+          계획에서 삭제할 수 있습니다.
+        </p>
+
+        <div id="planned-terms-list">
+          <p>아직 등록된 수강 계획이 없습니다.</p>
+        </div>
+      </section>
+
+      <!-- 전공 외 취득 학점 -->
+      <section class="maker-panel">
+        <h2>전공 외 취득 학점</h2>
+
+        <p>이미 취득한 교양 및 기초 학점을 입력하세요.</p>
+
+        <div class="maker-form-row">
+          <label class="field">
+            교양필수
+            <input id="general-required" type="number" min="0" step="any" value="0" />
+          </label>
+
+          <label class="field">
+            교양선택
+            <input id="general-elective" type="number" min="0" step="any" value="0" />
+          </label>
+
+          <label class="field">
+            기초필수
+            <input id="foundation-required" type="number" min="0" step="any" value="0" />
+          </label>
+
+          <label class="field">
+            기초선택
+            <input id="foundation-elective" type="number" min="0" step="any" value="0" />
+          </label>
+
+          <label class="field">
+            일반선택
+            <input id="free-elective" type="number" min="0" step="any" value="0" />
+          </label>
+        </div>
+
+        <button
+        type="button"
+        id="apply-other-credits"
+        class="button button--primary"
+        >
+        학점 반영하기
+        </button>
+
+        <p
+          id="other-credits-feedback"
+          class="maker-notice"
+          role="status"
+          aria-live="polite"
+        ></p>
+
+      </section>
+
+      <!-- 이수요건 검증 -->
+      <section class="maker-panel">
+        <h2>이수요건 검증</h2>
+
+        <p>
+          작성한 수강 계획을 기준으로
+          학점, 필수 과목, 선수과목 조건을 검사합니다.
+        </p>
+
+        <p>
+          사용자 확인 필요 항목:
+          <span id="review-pending-count">0</span>개
+        </p>
+
+        <button
+          type="button"
+          id="validate-button"
+          class="button button--primary"
+        >
+          이수요건 검사하기
+        </button>
+
+        <div id="validation-result" aria-live="polite">
+          <p>아직 검증을 실행하지 않았습니다.</p>
+        </div>
+      </section>
+
     </main>
   </body>
 </html>
