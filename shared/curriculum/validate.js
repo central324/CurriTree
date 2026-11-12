@@ -123,6 +123,16 @@ export function validateCurriculum(data) {
       checkReferences(course.hardPrerequisiteIds, `${at}.hardPrerequisiteIds`, course.id);
     }
     checkReferences(course.recommendedPreviousIds, `${at}.recommendedPreviousIds`, course.id);
+    // 연계 과목(설계↔실습): 선후 관계가 아니므로 양쪽 과목에 서로 적어야 합니다.
+    checkReferences(course.linkedCourseIds, `${at}.linkedCourseIds`, course.id);
+    if (isStringArray(course.linkedCourseIds)) {
+      course.linkedCourseIds.forEach((id, linkIndex) => {
+        const partner = data.courses.find((item) => isObject(item) && item.id === id);
+        if (partner && id !== course.id && !(Array.isArray(partner.linkedCourseIds) && partner.linkedCourseIds.includes(course.id))) {
+          fail(`${at}.linkedCourseIds[${linkIndex}]`, `연계 과목은 양방향이어야 합니다: ${id}에도 ${course.id}가 필요합니다.`);
+        }
+      });
+    }
 
     if (!isStringArray(course.tags)) {
       fail(`${at}.tags`, '문자열 배열이어야 합니다.');

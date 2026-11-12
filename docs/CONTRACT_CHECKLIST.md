@@ -133,6 +133,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
 | `offeredTerms` | string[]/null | O | 확인된 개설 학기 |
 | `hardPrerequisiteIds` | string[]/null | O | 공식 필수 선수 과목 관계 |
 | `recommendedPreviousIds` | string[] | O | 권장 선행 과목 |
+| `linkedCourseIds` | string[] | O | 연계 과목 (설계↔실습, 양방향) |
 | `tags` | string[] | O | 진로 태그 |
 
 `aliases`와 `courseCodes`는 필수 필드이지만 확인된 값이 없으면 `[]`을 허용합니다. 해당 필드를 생략하거나 `null`로 두지 않습니다. 비어 있는 `courseCodes`를 임의의 코드로 채우지 않고 과목명 기반 매칭 및 사용자 확인을 사용합니다.
@@ -154,10 +155,11 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
 
 `offeredTerms`는 `YYYY-1` 같은 실제 수강 학기(`termId`)가 아니라 **개설 학기 유형**을 뜻합니다. 미래 학기의 실제 개설 여부를 보장하지 않으므로 P0에서는 안내용으로 사용하고 수강 계획의 강제 차단 조건으로 사용하지 않습니다.
 
-`hardPrerequisiteIds`와 `recommendedPreviousIds`는 반드시 구분합니다.
+`hardPrerequisiteIds`, `recommendedPreviousIds`, `linkedCourseIds`는 반드시 구분합니다. (이슈 #15 결정)
 
-- `hardPrerequisiteIds`: 공식적으로 확인된 필수 선수 조건
-- `recommendedPreviousIds`: 학습 순서를 안내하는 권장 관계
+- `hardPrerequisiteIds`: 공식적으로 확인된 필수 선수 조건 — 이수체계도의 필수 선후수(빨간 화살표)
+- `recommendedPreviousIds`: 학습 순서를 안내하는 권장 관계 — 이수체계도의 추천 선후수(검은 화살표), 과목명이 같고 번호만 다른 과목(1 → 2)
+- `linkedCourseIds`: 순서 없이 함께 듣기를 권하는 연계 과목 — 설계(이론) 과목과 짝을 이루는 실습·실험 과목. 양쪽 과목에 서로 적고, 없으면 `[]`. 선수 검사에 쓰지 않고 화면에서 "연계 과목"으로 안내만 합니다.
 
 공식 선수 조건이 확인되지 않았다면 권장 관계를 임의로 필수 조건으로 변경하지 않습니다.
 
@@ -231,6 +233,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
       "offeredTerms": null,
       "hardPrerequisiteIds": [],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": ["hw-sw-convergence"]
     },
     {
@@ -244,6 +247,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
       "offeredTerms": null,
       "hardPrerequisiteIds": ["demo-prog"],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": ["bigdata-ai", "hw-sw-convergence"]
     },
     {
@@ -257,6 +261,7 @@ KLAS 학정번호에서 분반 번호를 제거하는 규칙은 확인된 형식
       "offeredTerms": null,
       "hardPrerequisiteIds": ["demo-ds"],
       "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
       "tags": ["bigdata-ai"]
     }
   ],
@@ -1120,6 +1125,7 @@ HTTP 200
 - [ ] 중복 과목 ID
 - [ ] 존재하지 않는 선수 과목 참조
 - [ ] `recommendedPreviousIds`가 존재하지 않는 과목을 참조하는 경우
+- [ ] `linkedCourseIds`가 존재하지 않는 과목을 참조하거나 한쪽에만 적힌 경우
 - [ ] `requiredCourseIds`가 존재하지 않는 과목을 참조하는 경우
 - [ ] `hardPrerequisiteIds: null`과 `[]`의 차이 검사
 - [ ] `requiredCourseIds: null`과 `[]`의 차이 검사

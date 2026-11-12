@@ -44,8 +44,8 @@ describe('실제 데이터로 실행한 서버', () => {
         {
           id: 'ce',
           name: '컴퓨터정보공학부',
-          defaultCurriculumId: 'ce-2026',
-          curricula: [{ id: 'ce-2026', catalogYear: 2026, admissionYears: [2026], isDemo: true }],
+          defaultCurriculumId: 'ce-2023',
+          curricula: [{ id: 'ce-2023', catalogYear: 2023, admissionYears: [2023], isDemo: false }],
         },
       ],
     });
@@ -58,9 +58,9 @@ describe('실제 데이터로 실행한 서버', () => {
   });
 
   test('curriculumId를 지정해도 같은 교육과정을 반환한다', async () => {
-    const result = await getJson(`${server.url}/api/curriculum/ce?curriculumId=ce-2026`);
+    const result = await getJson(`${server.url}/api/curriculum/ce?curriculumId=ce-2023`);
     assert.equal(result.status, 200);
-    assert.equal(result.body.curriculumId, 'ce-2026');
+    assert.equal(result.body.curriculumId, 'ce-2023');
   });
 
   test('형식이 잘못된 학과 ID는 400 / INVALID_REQUEST', async () => {
@@ -88,7 +88,7 @@ describe('학과가 여러 개인 서버', () => {
   let fixture;
   before(async () => {
     fixture = makeCurriculumDir({
-      'ce.json': makeCurriculum({ curriculumId: 'ce-2026', department: { id: 'ce', name: '컴정공' } }),
+      'ce.json': makeCurriculum({ curriculumId: 'ce-2023', department: { id: 'ce', name: '컴정공' } }),
       'ee.json': makeCurriculum({ curriculumId: 'ee-2026', department: { id: 'ee', name: '전자공' } }),
     });
     server = await startServer(createApp({ curriculumDir: fixture.directory, logger: silent }));

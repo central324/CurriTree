@@ -45,7 +45,7 @@ function sendPlan(plan) {
 
 // 1. 정상적인 수강 계획 요청
 test("POST /api/validate 정상 요청 HTTP 200", async () => {
-  const plan = createEmptyPlan("ce-2026");
+  const plan = createEmptyPlan("ce-2023");
 
   const response = await sendPlan(plan);
   const result = await response.json();
@@ -64,7 +64,7 @@ test("POST /api/validate 정상 요청 HTTP 200", async () => {
 
 // 2. 필수 필드가 누락된 경우
 test("필수 필드 누락 시 HTTP 400", async () => {
-  const plan = createEmptyPlan("ce-2026");
+  const plan = createEmptyPlan("ce-2023");
 
   delete plan.plannedTerms;
 
@@ -112,7 +112,7 @@ test("교육과정이 없으면 HTTP 404", async () => {
 test("중복 과목 배치 시 HTTP 422", async () => {
   // 실제 교육과정에서 과목 하나 가져오기
   const curriculumResponse = await fetch(
-    `${baseUrl}/api/curriculum/ce?curriculumId=ce-2026`
+    `${baseUrl}/api/curriculum/ce?curriculumId=ce-2023`
   );
 
   assert.equal(curriculumResponse.status, 200);
@@ -120,7 +120,7 @@ test("중복 과목 배치 시 HTTP 422", async () => {
   const curriculum = await curriculumResponse.json();
   const courseId = curriculum.courses[0].id;
 
-  const plan = createEmptyPlan("ce-2026");
+  const plan = createEmptyPlan("ce-2023");
 
   plan.plannedTerms = [
     {
