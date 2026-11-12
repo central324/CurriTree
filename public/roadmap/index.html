@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="전공 로드맵 — 컴퓨터정보공학부 과목의 선행·후속 관계" />
+    <meta name="theme-color" content="#faf7ee" />
+
+    <title>전공 로드맵 | 커리트리</title>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/roadmap/roadmap.css" />
+    <script type="module" src="/layout.js"></script>
+    <script type="module" src="/roadmap/roadmap.js"></script>
+  </head>
+
+  <body>
+    <main class="major-map">
+      <header class="major-map__header">
+        <h1>전공 로드맵</h1>
+        <p id="roadmap-source">과목을 누르면 먼저 들어야 할 과목과 이어서 들을 과목이 표시됩니다.</p>
+      </header>
+
+      <section class="major-map__toolbar" aria-label="로드맵 보기 설정">
+        <div class="major-map__filter">
+          <span class="major-map__label" id="track-label">진로 트랙</span>
+          <div class="chips" id="track-filter" role="group" aria-labelledby="track-label"></div>
+        </div>
+
+        <label class="field major-map__select">
+          <span>과목 선택</span>
+          <select id="course-select" disabled>
+            <option value="">불러오는 중…</option>
+          </select>
+        </label>
+
+        <ul class="major-map__legend" aria-label="범례">
+          <li><span class="legend-line legend-line--hard"></span>필수 선수</li>
+          <li><span class="legend-line legend-line--recommended"></span>권장 선행</li>
+          <li><span class="legend-node legend-node--required"></span>전공필수</li>
+        </ul>
+      </section>
+
+      <div class="major-map__body">
+        <div class="major-map__graph" id="roadmap-graph" role="img" aria-label="과목 선후수 관계 그래프. 과목 선택 목록으로도 같은 정보를 볼 수 있습니다.">
+          <p class="major-map__status" id="roadmap-status">교육과정을 불러오는 중입니다…</p>
+        </div>
+
+        <aside class="course-detail" id="course-detail" aria-live="polite">
+          <p class="course-detail__empty">과목을 선택하면 자세한 정보가 여기에 나옵니다.</p>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>
