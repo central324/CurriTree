@@ -1,3 +1,4 @@
+import { consumeMakerHandoff } from '../klas/handoff.js';
 const departmentSelect = document.getElementById("department-select");
 const curriculumSelect = document.getElementById("curriculum-select");
 const curriculumNotice = document.getElementById("curriculum-notice");
@@ -8,6 +9,16 @@ const courseSelect = document.getElementById("course-select");
 let departments = [];
 let currentCurriculum = null;
 let currentPlan = null;
+
+let pendingMakerPlan = null;
+
+try {
+  pendingMakerPlan = consumeMakerHandoff(
+    window.sessionStorage
+  );
+} catch {
+  pendingMakerPlan = null;
+}
 
 // 이수구분을 한국어로 표시
 const CATEGORY_NAMES = {
@@ -53,12 +64,41 @@ async function loadDepartments() {
       return;
     }
 
-    // 첫 번째 학과를 기본 선택
-    departmentSelect.value = departments[0].id;
+    const matchingDepartment = pendingMakerPlan
+      ? departments.find((department) =>
+          department.curricula.some(
+            (curriculum) =>
+              curriculum.id === pendingMakerPlan.curriculumId
+          )
+        )
+      : null;
+
+    const unavailableCurriculumId =
+      pendingMakerPlan && !matchingDepartment
+        ? pendingMakerPlan.curriculumId
+        : null;
+
+    departmentSelect.value = matchingDepartment
+      ? matchingDepartment.id
+      : departments[0].id;
 
     updateCurriculumOptions();
+
+    if (matchingDepartment) {
+      curriculumSelect.value = pendingMakerPlan.curriculumId;
+    } else if (unavailableCurriculumId) {
+      pendingMakerPlan = null;
+    }
+
     await loadCurriculum();
 
+    if (unavailableCurriculumId) {
+      showFeedback(
+        `교육과정 ${unavailableCurriculumId}을 찾지 못해 ` +
+        'KLAS 이수내역을 반영하지 못했습니다.',
+        true
+      );
+    }
   } catch (error) {
     curriculumNotice.textContent =
       "학과 정보를 불러오지 못했습니다: " + error.message;
@@ -112,8 +152,68 @@ async function loadCurriculum() {
 
     const curriculum = await fetchJSON(url);
 
+    if (
+      departmentSelect.value !== departmentId ||
+      curriculumSelect.value !== curriculumId
+    ) {
+      return;
+    }
+
     currentCurriculum = curriculum;
     currentPlan = createBrowserPlan(curriculum.curriculumId);
+
+    let importedValidation = null;
+    let importError = null;
+
+    if (
+      pendingMakerPlan &&
+      pendingMakerPlan.curriculumId === curriculum.curriculumId
+    ) {
+      const importedPlan = pendingMakerPlan;
+
+      pendingMakerPlan = null;
+
+      try {
+        const response = await fetch('/api/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(importedPlan),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error?.message ??
+            '전달된 수강 계획을 검증하지 못했습니다.'
+          );
+        }
+
+        if (
+          departmentSelect.value !== departmentId ||
+          curriculumSelect.value !== curriculumId
+        ) {
+          return;
+        }
+
+        currentPlan = importedPlan;
+        importedValidation = result;
+
+        for (const [category, inputId] of Object.entries(
+          OTHER_CREDIT_FIELDS
+        )) {
+          const input = document.getElementById(inputId);
+
+          input.value = String(
+            importedPlan.otherEarnedCredits[category]
+          );
+        }
+      } catch (error) {
+        importError = error.message;
+      }
+    }
 
     curriculumNotice.textContent = curriculum.isDemo
       ? "개발용 예시 교육과정입니다. 실제 졸업요건과 다를 수 있습니다."
@@ -121,8 +221,26 @@ async function loadCurriculum() {
 
     renderCourseOptions();
     renderPlan();
-    renderCreditSummary(null);
 
+    renderCreditSummary(
+      importedValidation?.summary ?? null
+    );
+
+    validationResult.replaceChildren();
+
+    if (importedValidation) {
+      renderValidationResult(importedValidation);
+
+      showFeedback(
+        'KLAS 이수내역이 커리메이커에 반영되었습니다.',
+        false
+      );
+    } else if (importError) {
+      showFeedback(
+        `KLAS 이수내역 반영 실패: ${importError}`,
+        true
+      );
+    }
   } catch (error) {
     curriculumNotice.textContent =
       "교육과정을 불러오지 못했습니다: " + error.message;
