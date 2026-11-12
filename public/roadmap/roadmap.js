@@ -1,6 +1,6 @@
 // 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 선택·트랙 필터를 처리합니다.
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
-import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdge } from '/roadmap/positions.js';
+import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdges } from '/roadmap/positions.js';
 
 const CYTOSCAPE_URL = 'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.mjs';
 const DEPARTMENT_ID = 'ce';
@@ -126,8 +126,8 @@ function graphStyle(color) {
       selector: 'edge',
       style: {
         width: 1.5,
-        'source-endpoint': `${NODE_WIDTH / 2}px 0px`,
-        'target-endpoint': `${-NODE_WIDTH / 2}px 0px`,
+        'source-endpoint': 'data(sourceEndpoint)',
+        'target-endpoint': 'data(targetEndpoint)',
         'target-arrow-shape': 'triangle',
         'arrow-scale': 0.9,
         'line-color': color.line,
@@ -212,26 +212,33 @@ function buildElements(curriculum, positions) {
     });
   }
 
-  // 화살표 방향: 앞 과목 → 뒤 과목. 꺾이는 점은 routeEdge가 정하고, Cytoscape 'segments' 형식으로 바꿔 넣습니다.
-  const edges = [];
+  // 화살표 방향: 앞 과목 → 뒤 과목. 경로(붙는 곳·꺾이는 점)는 routeEdges가 한꺼번에 정해 서로 겹치지 않게 합니다.
+  const edgeList = [];
   for (const [courseId, previousList] of state.graph.previous) {
     for (const { courseId: previousId, relation } of previousList) {
-      const source = positions.courses.get(previousId);
-      const target = positions.courses.get(courseId);
-      const points = routeEdge(source, target, positions.columns);
-      edges.push({
-        group: 'edges',
-        classes: points.length === 0 ? 'straight' : 'bent',
-        data: {
-          id: `${relation}:${previousId}->${courseId}`,
-          source: previousId,
-          target: courseId,
-          relation,
-          ...toSegmentData(source, target, points),
-        },
-      });
+      edgeList.push({ id: `${relation}:${previousId}->${courseId}`, sourceId: previousId, targetId: courseId, relation });
     }
   }
+  const routes = routeEdges(edgeList, positions);
+
+  const edges = edgeList.map(({ id, sourceId, targetId, relation }) => {
+    const { sourcePort, targetPort, points } = routes.get(id);
+    const source = positions.courses.get(sourceId);
+    const target = positions.courses.get(targetId);
+    return {
+      group: 'edges',
+      classes: points.length === 0 ? 'straight' : 'bent',
+      data: {
+        id,
+        source: sourceId,
+        target: targetId,
+        relation,
+        sourceEndpoint: `${sourcePort.x}px ${sourcePort.y}px`,
+        targetEndpoint: `${targetPort.x}px ${targetPort.y}px`,
+        ...toSegmentData(source, target, points),
+      },
+    };
+  });
 
   return [...nodes, ...edges];
 }
@@ -290,7 +297,8 @@ function courseList(ids, emptyText) {
 function renderDetail() {
   const course = state.courseById.get(state.selectedId);
   if (!course) {
-    elements.detail.innerHTML = '<p class="course-detail__empty">과목을 선택하면 자세한 정보가 여기에 나옵니다.</p>';
+    elements.detail.hidden = true;
+    elements.detail.innerHTML = '';
     return;
   }
 
@@ -318,7 +326,7 @@ function renderDetail() {
     <header class="course-detail__head">
       <span class="type ${isRequired ? 'type--required' : 'type--elective'}">${CATEGORY_LABELS[course.category] ?? course.category}</span>
       <h2>${course.name}</h2>
-      <button type="button" class="button button--quiet course-detail__clear" data-action="clear">선택 해제</button>
+      <button type="button" class="button button--quiet course-detail__clear" data-action="clear">닫기</button>
     </header>
     <dl class="course-detail__facts">
       <div><dt>학점</dt><dd>${course.credits}학점</dd></div>
@@ -335,6 +343,18 @@ function renderDetail() {
       이어서 들을 수 있는 과목 <strong>${followUps.courses.length}</strong>개
     </p>
     ${unknownNote}`;
+
+  elements.detail.hidden = false;
+  placeDetail();
+}
+
+// 팝업 위치: 로드맵 왼쪽 아래 빈 곳(1학년 묶음 바로 아래)에서 시작해 아래로 펼칩니다. 로드맵 창 밖으로 나가도 됩니다.
+function placeDetail() {
+  if (elements.detail.hidden) return;
+  const firstYear = state.cy.nodes('.year').first();
+  const below = firstYear.nonempty() ? firstYear.renderedBoundingBox().y2 + 16 : 0;
+  const top = Math.max(below, elements.scroller.clientHeight * 0.35);
+  elements.detail.style.top = `${Math.round(top)}px`;
 }
 
 // reveal: 목록·상세 패널에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.
@@ -413,14 +433,21 @@ function bindEvents() {
     { passive: false },
   );
 
-  window.addEventListener('resize', layoutGraph);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.selectedId) select(null);
+  });
+
+  window.addEventListener('resize', () => {
+    layoutGraph();
+    placeDetail();
+  });
 }
 
-// 그래프 높이를 보이는 영역 높이에 맞추고(확대 비율 고정), 넓이는 그만큼 늘려 가로 스크롤로 봅니다.
+// 그래프 전체 높이를 로드맵 창 높이에 딱 맞추고(상하 스크롤 없음), 넓이는 그만큼 늘려 가로 스크롤로 봅니다.
 // 사용자가 확대·축소하거나 끌어서 옮기는 기능은 끕니다.
 const GRAPH_PADDING = 24;
-const MIN_ZOOM = 0.6;
-const MAX_ZOOM = 1;
+const GRAPH_PADDING_TOP = 56; // 위에 겹쳐 둔 범례 상자만큼 띄움
+const MAX_ZOOM = 1.4;
 
 function layoutGraph() {
   const { cy } = state;
@@ -431,14 +458,14 @@ function layoutGraph() {
   // 두 번 계산: 넓이를 정하면 가로 스크롤바가 생겨 보이는 높이가 줄어들기 때문
   for (let pass = 0; pass < 2; pass += 1) {
     graph.style.height = '0px';
-    const available = scroller.clientHeight - GRAPH_PADDING * 2;
-    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, available / box.h));
+    const available = scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING;
+    zoom = Math.min(MAX_ZOOM, available / box.h);
     graph.style.width = `${Math.ceil(box.w * zoom + GRAPH_PADDING * 2)}px`;
   }
-  graph.style.height = `${Math.floor(Math.max(scroller.clientHeight, box.h * zoom + GRAPH_PADDING * 2))}px`;
+  graph.style.height = `${scroller.clientHeight}px`;
   cy.resize();
   cy.zoom(zoom);
-  cy.pan({ x: GRAPH_PADDING - box.x1 * zoom, y: GRAPH_PADDING - box.y1 * zoom });
+  cy.pan({ x: GRAPH_PADDING - box.x1 * zoom, y: GRAPH_PADDING_TOP - box.y1 * zoom });
 }
 
 async function loadCurriculum() {

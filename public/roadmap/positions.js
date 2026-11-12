@@ -7,10 +7,10 @@
 
 export const NODE_WIDTH = 150;
 export const NODE_HEIGHT = 40;
-export const COLUMN_WIDTH = 190; // 같은 학년 안 학기 칸 사이 거리 (과목 사이 빈칸 40px에 화살표가 지나감)
-export const YEAR_GAP = 60; // 학년 묶음 사이 추가 거리
-export const ROW_HEIGHT = 56;
-export const HEADER_OFFSET = 44; // 학기 제목과 첫 과목 사이 거리
+export const COLUMN_WIDTH = 210; // 같은 학년 안 학기 칸 사이 거리 (과목 사이 빈칸 60px에 화살표 여러 개가 나란히 지나감)
+export const YEAR_GAP = 50; // 학년 묶음 사이 추가 거리
+export const ROW_HEIGHT = 72; // 행 사이 틈 32px에 가로 화살표 여러 개가 나란히 지나감
+export const HEADER_OFFSET = 64; // 학기 제목과 첫 과목 사이 거리 (첫 행 위에도 가로 통로가 생기도록)
 
 const YEARS = [1, 2, 3, 4];
 const SEMESTERS = [1, 2];
@@ -92,51 +92,230 @@ export function computePositions(courses) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// 화살표 길 찾기: 가로·세로 직선으로만 잇고, 화살표끼리 겹치지 않게 서로 떨어뜨립니다.
+//
+//  1) 붙는 자리(포트): 한 과목에 화살표가 여러 개 붙으면 상자 옆면에서 위아래로 나눠 붙입니다.
+//  2) 세로선: 칸 사이 빈칸(세로 통로)마다 세로로 겹치는 선들에 서로 다른 트랙(x)을 줍니다.
+//  3) 가로선: 사이에 칸이 있는 긴 화살표는 행 사이 틈(가로 통로)으로 지나가며, 겹치면 서로 다른 트랙(y)을 줍니다.
+//
+//      [앞] ─┐                       ┌─▶ [뒤]
+//            │  (세로 통로, 트랙별 x) │
+//            └──── (가로 통로, 트랙별 y) ────┘
+// ---------------------------------------------------------------------------
+
+export const TRACK_SPACING = 8; // 나란히 지나가는 화살표 사이 거리
+export const PORT_SPACING = 8; // 한 과목 옆면에 붙는 화살표 사이 거리
+const PORT_LIMIT = NODE_HEIGHT / 2 - 5; // 포트가 상자 모서리에 너무 붙지 않도록
+const TRACK_MARGIN = 10; // 같은 트랙을 이어 쓸 때 위아래 최소 간격
+const GAP_PADDING = 10; // 통로 양끝에서 띄울 거리
+
+// 포트 높이 격자: 오른쪽 옆면은 0, ±10, ±20…, 왼쪽 옆면은 ±5, ±15…
+// 같은 행에서 마주 보는 "나가는 토막"과 "들어오는 토막"이 같은 높이가 되지 않도록 서로 어긋나게 둡니다.
+const PORT_GRID = 10;
+function portOffsets(count, side) {
+  const phase = side === 'right' ? 0 : PORT_GRID / 2;
+  const candidates = [];
+  for (let k = -3; k <= 3; k += 1) candidates.push(phase + k * PORT_GRID);
+  const chosen = candidates
+    .filter((y) => Math.abs(y) <= PORT_LIMIT)
+    .sort((a, b) => Math.abs(a) - Math.abs(b) || a - b)
+    .slice(0, count)
+    .sort((a, b) => a - b);
+  // 격자 자리가 모자라면(화살표가 아주 많으면) 고르게 압축
+  return chosen.length === count ? chosen : spread(count, PORT_SPACING, PORT_LIMIT);
+}
+
+// 개수만큼 가운데를 중심으로 고르게 나눈 위치(오프셋) 목록
+function spread(count, spacing, limit) {
+  const step = count > 1 ? Math.min(spacing, (2 * limit) / (count - 1)) : 0;
+  return Array.from({ length: count }, (_, index) => (index - (count - 1) / 2) * step);
+}
+
+// 구간 [start, end]들이 서로 겹치지 않게 트랙 번호를 매깁니다. (구간 분할 탐욕 알고리즘)
+function assignTracks(items) {
+  const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end);
+  const trackEnds = [];
+  for (const item of sorted) {
+    let track = trackEnds.findIndex((end) => end + TRACK_MARGIN < item.start);
+    if (track === -1) {
+      track = trackEnds.length;
+      trackEnds.push(item.end);
+    } else {
+      trackEnds[track] = item.end;
+    }
+    item.track = track;
+  }
+  return trackEnds.length;
+}
+
+function groupBy(list, keyOf) {
+  const groups = new Map();
+  for (const item of list) {
+    const key = keyOf(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return groups;
+}
+
 /**
- * 화살표가 꺾이는 지점들을 계산합니다. 가로·세로 직선으로만 이어지고, 과목 상자를 가로지르지 않습니다.
- * - source, target: 과목 중심 좌표 { x, y }
- * - columns: 학기 칸 중심 x 목록 (computePositions의 columns)
- * 반환: 꺾이는 점 [{ x, y }] (시작·끝 과목 중심은 빼고)
- *
- *  바로 다음 칸: 두 과목 사이 빈칸에서 한 번 세로로 꺾음
- *      [앞] ─┐
- *            └─▶ [뒤]
- *  사이에 칸이 있음: 앞 과목 오른쪽 빈칸 → 뒤 과목 위쪽 행 사이 틈(가로) → 뒤 과목 왼쪽 빈칸
- *      [앞] ─┐
- *            └──────(행 사이 틈)──────┐
- *                                     └─▶ [뒤]
+ * 화살표 여러 개의 경로를 한꺼번에 계산합니다.
+ * - edges: [{ id, sourceId, targetId }]  (앞 과목 → 뒤 과목)
+ * - layout: computePositions 결과
+ * 반환: Map<id, { sourcePort, targetPort, points }>
+ *   - sourcePort / targetPort: 과목 중심에서 화살표가 붙는 곳까지의 상대 좌표 { x, y }
+ *   - points: 꺾이는 점들의 절대 좌표 [{ x, y }] (붙는 곳 사이, 가로·세로 선분으로만 이어짐)
  */
-export function routeEdge(source, target, columns) {
+export function routeEdges(edges, layout) {
   const half = NODE_WIDTH / 2;
-  const sourceRight = source.x + half;
-  const targetLeft = target.x - half;
+  const columns = layout.columns;
+  const count = columns.length;
+  const position = (id) => layout.courses.get(id);
 
-  // 뒤 과목이 같은 칸이거나 왼쪽: 오른쪽으로 돌아 들어감
-  if (targetLeft <= sourceRight) {
-    const x = Math.max(source.x, target.x) + half + (COLUMN_WIDTH - NODE_WIDTH) / 2;
-    return [
-      { x, y: source.y },
-      { x, y: target.y },
-    ];
-  }
-
-  const between = columns.filter((x) => x - half >= sourceRight && x + half <= targetLeft);
-
-  if (between.length === 0) {
-    const x = (sourceRight + targetLeft) / 2;
-    return source.y === target.y ? [] : [
-      { x, y: source.y },
-      { x, y: target.y },
-    ];
-  }
-
-  const exitX = (sourceRight + (between[0] - half)) / 2;
-  const enterX = (between.at(-1) + half + targetLeft) / 2;
-  const laneY = target.y - ROW_HEIGHT / 2; // 뒤 과목 행과 그 위 행 사이 틈
-  return [
-    { x: exitX, y: source.y },
-    { x: exitX, y: laneY },
-    { x: enterX, y: laneY },
-    { x: enterX, y: target.y },
+  // 세로 통로 k: k번째 칸 왼쪽 빈칸 (0 = 맨 앞, count = 맨 뒤)
+  const gapRegion = (k) => [
+    k === 0 ? columns[0] - half - (COLUMN_WIDTH - NODE_WIDTH) : columns[k - 1] + half,
+    k === count ? columns[count - 1] + half + (COLUMN_WIDTH - NODE_WIDTH) : columns[k] - half,
   ];
+  const exitGap = (rightEdge) => {
+    for (let k = 1; k <= count; k += 1) if (gapRegion(k)[0] >= rightEdge - 0.5) return k;
+    return count;
+  };
+  const enterGap = (leftEdge) => {
+    for (let k = count - 1; k >= 0; k -= 1) if (gapRegion(k)[1] <= leftEdge + 0.5) return k;
+    return 0;
+  };
+
+  // 경로 종류: 뒤 과목이 오른쪽 칸이면 'forward', 같은 칸(또는 왼쪽)이면 'back'(오른쪽 통로로 돌아 상자 오른쪽에 붙음)
+  const routes = edges.map((edge) => {
+    const source = position(edge.sourceId);
+    const target = position(edge.targetId);
+    const exit = exitGap(source.x + half);
+    const back = enterGap(target.x - half) < exit;
+    const enter = back ? exit : enterGap(target.x - half);
+    return { edge, source, target, exit, enter, back, verticals: [] };
+  });
+
+  // 1) 포트: 상자 오른쪽(나가는 화살표 + 'back'으로 들어오는 화살표)과 왼쪽(들어오는 화살표)을 따로 나눠 줍니다.
+  //    상대 과목이 위에 있을수록 위쪽 포트를 써서 화살표끼리 덜 엇갈리게 합니다.
+  const sides = new Map(); // `${과목}|right` → [{ route, end: 'source' | 'target', other }]
+  const addToSide = (courseId, side, item) => {
+    const key = `${courseId}|${side}`;
+    if (!sides.has(key)) sides.set(key, []);
+    sides.get(key).push(item);
+  };
+  for (const route of routes) {
+    addToSide(route.edge.sourceId, 'right', { route, end: 'source', other: route.target });
+    addToSide(route.edge.targetId, route.back ? 'right' : 'left', { route, end: 'target', other: route.source });
+  }
+  for (const [key, list] of sides) {
+    const offsets = portOffsets(list.length, key.endsWith('|right') ? 'right' : 'left');
+    list
+      .sort((a, b) => a.other.y - b.other.y || a.other.x - b.other.x)
+      .forEach((item, index) => (item.route[`${item.end}Offset`] = offsets[index]));
+  }
+  for (const route of routes) {
+    route.sy = route.source.y + route.sourceOffset;
+    route.ty = route.target.y + route.targetOffset;
+  }
+
+  // 2) 가로 통로: 사이에 칸이 있으면 뒤 과목 행 바로 위 틈으로 지나갑니다. 겹치는 가로선끼리 트랙(y)을 나눕니다.
+  const rowGap = ROW_HEIGHT - NODE_HEIGHT;
+  const gapMiddle = (k) => (gapRegion(k)[0] + gapRegion(k)[1]) / 2;
+  for (const route of routes) {
+    if (route.exit === route.enter) continue;
+    const center = route.target.y - ROW_HEIGHT / 2;
+    route.lane = { key: center, center, start: gapMiddle(route.exit), end: gapMiddle(route.enter) };
+  }
+  const lanes = routes.filter((route) => route.lane).map((route) => route.lane);
+  for (const group of groupBy(lanes, (lane) => lane.key).values()) {
+    const offsets = spread(assignTracks(group), TRACK_SPACING, rowGap / 2 - 4);
+    for (const lane of group) lane.y = lane.center + offsets[lane.track];
+  }
+
+  // 3) 세로선 만들기. 각 세로선은 왼쪽으로 뻗는 가로 토막(leftStubs)과 오른쪽으로 뻗는 토막(rightStubs)의 높이를 기억합니다.
+  for (const route of routes) {
+    const { sy, ty, exit, enter, lane, back } = route;
+    if (lane) {
+      route.verticals.push({ route, gap: exit, start: Math.min(sy, lane.y), end: Math.max(sy, lane.y), leftStubs: [sy], rightStubs: [] });
+      route.verticals.push({ route, gap: enter, start: Math.min(lane.y, ty), end: Math.max(lane.y, ty), leftStubs: [], rightStubs: [ty] });
+    } else if (back || sy !== ty) {
+      route.verticals.push({
+        route,
+        gap: exit,
+        start: Math.min(sy, ty),
+        end: Math.max(sy, ty),
+        leftStubs: back ? [sy, ty] : [sy],
+        rightStubs: back ? [] : [ty],
+      });
+    }
+  }
+
+  // 4) 세로 통로마다 트랙(x)을 나눕니다.
+  //    - 위아래로 겹치는 세로선은 다른 트랙
+  //    - 같은 높이에 "왼쪽 토막"과 "오른쪽 토막"이 있으면, 왼쪽 토막을 가진 선이 더 왼쪽 트랙 (토막끼리 겹치지 않게)
+  const sameHeight = (a, b) => Math.abs(a - b) <= PORT_GRID / 2 + 0.5; // 5px 차이도 되도록 엇갈리지 않게 순서를 맞춤
+  const mustBeLeft = (a, b) => a.leftStubs.some((y) => b.rightStubs.some((other) => sameHeight(y, other)));
+  const allVerticals = routes.flatMap((route) => route.verticals);
+  for (const [gap, verticals] of groupBy(allVerticals, (vertical) => vertical.gap)) {
+    const tracks = []; // [{ items, end }]
+    for (const vertical of [...verticals].sort((a, b) => a.start - b.start || a.end - b.end)) {
+      let track = tracks.find(
+        (candidate) =>
+          candidate.end + TRACK_MARGIN < vertical.start &&
+          candidate.items.every((item) => !mustBeLeft(item, vertical) && !mustBeLeft(vertical, item)),
+      );
+      if (!track) {
+        track = { items: [], end: -Infinity };
+        tracks.push(track);
+      }
+      track.items.push(vertical);
+      track.end = vertical.end;
+    }
+
+    // 트랙 순서: "왼쪽이어야 함" 조건을 지키는 순서(위상 정렬). 조건이 없으면 나가는 선 → 지나가는 선 → 들어오는 선
+    const weight = (track) => track.items.reduce((sum, item) => sum + item.rightStubs.length - item.leftStubs.length, 0);
+    const remaining = [...tracks].sort((a, b) => weight(a) - weight(b));
+    const ordered = [];
+    while (remaining.length > 0) {
+      const index = remaining.findIndex((track) =>
+        remaining.every((other) => other === track || !other.items.some((a) => track.items.some((b) => mustBeLeft(a, b)))),
+      );
+      ordered.push(...remaining.splice(index === -1 ? 0 : index, 1));
+    }
+
+    const [left, right] = gapRegion(gap);
+    const offsets = spread(ordered.length, TRACK_SPACING, (right - left) / 2 - GAP_PADDING);
+    ordered.forEach((track, index) => {
+      for (const vertical of track.items) vertical.x = (left + right) / 2 + offsets[index];
+    });
+  }
+
+  // 5) 꺾이는 점으로 정리
+  const result = new Map();
+  for (const route of routes) {
+    const { edge, sy, ty, verticals, lane, back } = route;
+    let points = [];
+    if (lane) {
+      const [first, second] = verticals;
+      points = [
+        { x: first.x, y: sy },
+        { x: first.x, y: lane.y },
+        { x: second.x, y: lane.y },
+        { x: second.x, y: ty },
+      ];
+    } else if (verticals.length === 1) {
+      points = [
+        { x: verticals[0].x, y: sy },
+        { x: verticals[0].x, y: ty },
+      ];
+    }
+    result.set(edge.id, {
+      sourcePort: { x: half, y: route.sourceOffset },
+      targetPort: { x: back ? half : -half, y: route.targetOffset },
+      points,
+    });
+  }
+  return result;
 }

@@ -1,7 +1,7 @@
 // 전공 로드맵 화면 (public/roadmap/)
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdge } from '../public/roadmap/positions.js';
+import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdges } from '../public/roadmap/positions.js';
 import { RECOMMENDED_TERM_PATTERN } from '../shared/curriculum/schema.js';
 import { createApp } from '../server/app.js';
 import { loadRealCurriculum, makeCourse } from './helpers/curriculum.js';
@@ -79,70 +79,123 @@ describe('computePositions', () => {
   });
 });
 
-describe('routeEdge (직각 화살표)', () => {
-  const positions = computePositions([
-    makeCourse({ id: 'a', recommendedTerm: '1-1' }),
-    makeCourse({ id: 'b', recommendedTerm: '1-2' }),
-    makeCourse({ id: 'c', recommendedTerm: '2-1' }),
-    makeCourse({ id: 'c2', recommendedTerm: '2-1' }),
-    makeCourse({ id: 'd', recommendedTerm: '2-2' }),
-    makeCourse({ id: 'd2', recommendedTerm: '2-2' }),
-  ]);
-  const route = (from, to) => routeEdge(at(positions, from), at(positions, to), positions.columns);
-
-  // 시작 → 꺾이는 점들 → 끝 이 모두 가로 또는 세로 선분인지
-  function assertOrthogonal(from, to) {
-    const points = [at(positions, from), ...route(from, to), at(positions, to)];
-    for (let i = 1; i < points.length; i += 1) {
-      const horizontal = points[i].y === points[i - 1].y;
-      const vertical = points[i].x === points[i - 1].x;
-      assert.ok(horizontal || vertical, `${from}→${to} ${i}번째 선분`);
+// ---- 화살표 경로 검사 도우미 ----
+function edgesOf(courses) {
+  const edges = [];
+  for (const course of courses) {
+    for (const [relation, ids] of [
+      ['hard', course.hardPrerequisiteIds ?? []],
+      ['recommended', course.recommendedPreviousIds],
+    ]) {
+      for (const id of ids) edges.push({ id: `${relation}:${id}->${course.id}`, sourceId: id, targetId: course.id });
     }
   }
+  return edges;
+}
 
-  test('같은 행의 바로 다음 칸이면 꺾지 않는다', () => {
-    assert.deepEqual(route('a', 'b'), []);
-  });
+// 각 화살표를 [붙는 곳, 꺾이는 점…, 붙는 곳] 선분 목록으로
+function segmentsOf(courses) {
+  const layout = computePositions(courses);
+  const edges = edgesOf(courses);
+  const routes = routeEdges(edges, layout);
+  const segments = [];
+  for (const edge of edges) {
+    const route = routes.get(edge.id);
+    const source = layout.courses.get(edge.sourceId);
+    const target = layout.courses.get(edge.targetId);
+    const points = [
+      { x: source.x + route.sourcePort.x, y: source.y + route.sourcePort.y },
+      ...route.points,
+      { x: target.x + route.targetPort.x, y: target.y + route.targetPort.y },
+    ];
+    for (let i = 1; i < points.length; i += 1) segments.push({ edge, a: points[i - 1], b: points[i] });
+  }
+  return { layout, edges, routes, segments };
+}
 
-  test('다른 행의 바로 다음 칸이면 두 과목 사이 빈칸에서 한 번 세로로 꺾는다', () => {
-    const points = route('b', 'c2');
-    assert.equal(points.length, 2);
-    const gapLeft = at(positions, 'b').x + NODE_WIDTH / 2;
-    const gapRight = at(positions, 'c2').x - NODE_WIDTH / 2;
-    assert.ok(points[0].x > gapLeft && points[0].x < gapRight);
-    assertOrthogonal('b', 'c2');
-  });
+const span = (p, q) => [Math.min(p, q), Math.max(p, q)];
+const overlapLength = ([a1, a2], [b1, b2]) => Math.min(a2, b2) - Math.max(a1, b1);
 
-  test('사이에 칸이 있으면 과목을 가로지르지 않고 행 사이 틈으로 돌아간다', () => {
-    const points = route('a', 'd2');
-    assert.equal(points.length, 4);
-    assertOrthogonal('a', 'd2');
-
-    // 가로로 지나가는 선(틈)은 사이 칸 과목 상자들과 겹치지 않음
-    const laneY = points[1].y;
-    for (const id of ['b', 'c', 'c2']) {
-      const box = at(positions, id);
-      assert.ok(Math.abs(laneY - box.y) >= NODE_HEIGHT / 2, id);
+function overlappingPairs(segments) {
+  const pairs = [];
+  for (let i = 0; i < segments.length; i += 1) {
+    for (let j = i + 1; j < segments.length; j += 1) {
+      const [p, q] = [segments[i], segments[j]];
+      if (p.edge.id === q.edge.id) continue;
+      const bothHorizontal = p.a.y === p.b.y && q.a.y === q.b.y && Math.abs(p.a.y - q.a.y) < 3;
+      const bothVertical = p.a.x === p.b.x && q.a.x === q.b.x && Math.abs(p.a.x - q.a.x) < 3;
+      if (bothHorizontal && overlapLength(span(p.a.x, p.b.x), span(q.a.x, q.b.x)) > 1) pairs.push(`${p.edge.id} = ${q.edge.id}`);
+      if (bothVertical && overlapLength(span(p.a.y, p.b.y), span(q.a.y, q.b.y)) > 1) pairs.push(`${p.edge.id} = ${q.edge.id}`);
     }
-    // 세로선은 칸 사이 빈칸에 있음
-    for (const point of points) {
-      for (const x of positions.columns) assert.ok(Math.abs(point.x - x) > NODE_WIDTH / 2);
-    }
+  }
+  return pairs;
+}
+
+describe('routeEdges (화살표 길 찾기)', () => {
+  const real = segmentsOf(loadRealCurriculum().courses);
+
+  test('실제 데이터: 모든 선분이 가로 또는 세로다 (대각선 없음)', () => {
+    for (const { edge, a, b } of real.segments) assert.ok(a.x === b.x || a.y === b.y, edge.id);
   });
 
-  test('실제 데이터의 모든 화살표가 가로·세로 선분으로만 이루어진다', () => {
-    const { courses } = loadRealCurriculum();
-    const real = computePositions(courses);
-    for (const course of courses) {
-      for (const previousId of [...(course.hardPrerequisiteIds ?? []), ...course.recommendedPreviousIds]) {
-        const source = real.courses.get(previousId);
-        const target = real.courses.get(course.id);
-        const points = [source, ...routeEdge(source, target, real.columns), target];
-        for (let i = 1; i < points.length; i += 1) {
-          assert.ok(points[i].x === points[i - 1].x || points[i].y === points[i - 1].y, `${previousId}→${course.id}`);
-        }
+  test('실제 데이터: 화살표끼리 같은 선 위에 겹치는 곳이 없다', () => {
+    assert.deepEqual(overlappingPairs(real.segments), []);
+  });
+
+  test('실제 데이터: 화살표가 출발·도착 과목이 아닌 과목 상자를 지나가지 않는다', () => {
+    for (const { edge, a, b } of real.segments) {
+      for (const [id, box] of real.layout.courses) {
+        if (id === edge.sourceId || id === edge.targetId) continue;
+        const crossesX = overlapLength(span(a.x, b.x), [box.x - NODE_WIDTH / 2, box.x + NODE_WIDTH / 2]) > 0;
+        const crossesY = overlapLength(span(a.y, b.y), [box.y - NODE_HEIGHT / 2, box.y + NODE_HEIGHT / 2]) >= 0;
+        assert.ok(!(crossesX && crossesY), `${edge.id} → ${id}`);
       }
     }
+  });
+
+  test('한 과목에 붙는 화살표가 여러 개면 붙는 높이를 서로 다르게 나눈다', () => {
+    const { routes } = segmentsOf([
+      makeCourse({ id: 'a', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'b', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'c', recommendedTerm: '1-2', recommendedPreviousIds: ['a', 'b'] }),
+    ]);
+    const ys = [...routes.values()].map((route) => route.targetPort.y);
+    assert.equal(new Set(ys).size, 2);
+    for (const y of ys) assert.ok(Math.abs(y) < NODE_HEIGHT / 2);
+  });
+
+  test('같은 칸을 지나는 세로선은 서로 다른 x로 나란히 놓는다', () => {
+    // a·b(1-1) → c·d(1-2): 네 화살표가 같은 빈칸을 위아래로 지나감
+    const courses = [
+      makeCourse({ id: 'a', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'b', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'c', recommendedTerm: '1-2', recommendedPreviousIds: ['b'] }),
+      makeCourse({ id: 'd', recommendedTerm: '1-2', recommendedPreviousIds: ['a'] }),
+    ];
+    assert.deepEqual(overlappingPairs(segmentsOf(courses).segments), []);
+  });
+
+  test('사이에 칸이 있는 긴 화살표 여러 개는 행 사이 틈에서 서로 다른 높이로 지나간다', () => {
+    const courses = [
+      makeCourse({ id: 'a', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'b', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'mid', recommendedTerm: '1-2' }),
+      makeCourse({ id: 'c', recommendedTerm: '2-1', recommendedPreviousIds: ['a', 'b'] }),
+    ];
+    const { segments, routes } = segmentsOf(courses);
+    assert.deepEqual(overlappingPairs(segments), []);
+    const laneYs = [...routes.values()].map((route) => route.points[1].y);
+    assert.equal(new Set(laneYs).size, 2);
+  });
+
+  test('같은 칸 안의 과목끼리 이어지면 오른쪽 통로로 돌아 뒤 과목 오른쪽에 붙는다', () => {
+    const { routes, segments } = segmentsOf([
+      makeCourse({ id: 'a', recommendedTerm: '3-2' }),
+      makeCourse({ id: 'b', recommendedTerm: '3-2', recommendedPreviousIds: ['a'] }),
+    ]);
+    const route = [...routes.values()][0];
+    assert.equal(route.targetPort.x, NODE_WIDTH / 2);
+    for (const { a, b } of segments) assert.ok(a.x === b.x || a.y === b.y);
   });
 });
 
