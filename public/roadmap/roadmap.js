@@ -374,6 +374,7 @@ function renderDetail() {
 // ---- 과목 정보 팝업 ----
 // 열기: 자리를 정한 뒤 살짝 아래에서 떠오르며 나타남 / 다른 과목 선택: 새 자리로 부드럽게 이동 / 닫기: 흐려지며 사라짐
 const POPUP_MS = 200; // roadmap.css의 --popup-duration과 같은 값
+const POPUP_MOVE_MS = 260; // roadmap.css의 팝업 left/top 이동 시간과 같은 값
 let closeTimer;
 
 function openDetail() {
@@ -383,7 +384,7 @@ function openDetail() {
   detail.hidden = false;
 
   if (wasOpen) {
-    placeDetail();
+    movePopup();
     return;
   }
   detail.classList.add('is-placing'); // 처음 열 때는 자리 이동 애니메이션 없이 바로 그 자리에
@@ -393,8 +394,18 @@ function openDetail() {
   detail.classList.add('is-open');
 }
 
+// 열려 있는 팝업을 새 자리로 옮깁니다. 위로 옮겨 가면 페이지가 짧아질 수 있으므로 높이를 붙잡고, 이동이 끝난 뒤 놓아 줍니다.
+function movePopup() {
+  if (elements.detail.hidden || !state.selectedId) return;
+  holdPageHeight();
+  placeDetail();
+  releasePageHeight(POPUP_MOVE_MS);
+}
+
 function closeDetail() {
   const { detail } = elements;
+  if (detail.hidden) return;
+  holdPageHeight(); // 팝업이 사라져 페이지가 짧아져도 화면이 갑자기 끌려 올라가지 않게
   detail.classList.remove('is-open');
   clearTimeout(closeTimer);
   const hide = () => {
@@ -406,6 +417,7 @@ function closeDetail() {
   // 동작 줄이기: 기다리지 않고 바로 숨김
   if (reducedMotion.matches) hide();
   else closeTimer = setTimeout(hide, POPUP_MS);
+  releasePageHeight(reducedMotion.matches ? 0 : POPUP_MS + 20); // 사라진 뒤 필요한 만큼만 부드럽게 올라감
 }
 
 // 화면에 그려진 선택 과목·관련 과목·강조 화살표·범례를 "가리면 안 되는 상자"로 모읍니다. (로드맵 창 기준 좌표)
@@ -474,7 +486,7 @@ function select(courseId, { reveal = false } = {}) {
     const { scroller } = elements;
     const box = state.cy.getElementById(state.selectedId).renderedBoundingBox();
     const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
-    if (outside) scroller.scrollLeft = (box.x1 + box.x2) / 2 - scroller.clientWidth / 2;
+    if (outside) scrollGraphTo((box.x1 + box.x2) / 2 - scroller.clientWidth / 2);
   }
 }
 
@@ -524,17 +536,18 @@ function bindEvents() {
     if (event.target.closest('[data-action="clear"]')) select(null);
   });
 
-  // 마우스 휠(세로)을 가로 스크롤로 바꿉니다. 끝까지 가면 원래대로 페이지가 스크롤됩니다.
+  // 그래프 위의 휠·터치패드 입력은 모두 "로드맵 가로 이동"으로만 씁니다.
+  // (끝에 닿아도 페이지 상하 스크롤로 넘기지 않음 → 좌우로 움직이다 페이지가 같이 움직이는 문제 방지)
+  // 로드맵이 창에 다 들어와 가로로 움직일 게 없으면 원래대로 페이지가 스크롤됩니다.
   elements.scroller.addEventListener(
     'wheel',
     (event) => {
       const { scroller } = elements;
-      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-      const maxLeft = scroller.scrollWidth - scroller.clientWidth;
-      const canMove = event.deltaY > 0 ? scroller.scrollLeft < maxLeft - 1 : scroller.scrollLeft > 0;
-      if (!canMove) return;
+      if (event.ctrlKey || scroller.scrollWidth <= scroller.clientWidth) return;
       event.preventDefault();
-      scroller.scrollLeft += event.deltaY;
+      const unit = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? scroller.clientWidth : 1; // 줄·페이지 단위 → px
+      const delta = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * unit;
+      scrollGraphTo(smoothScroll.target ?? scroller.scrollLeft, delta);
     },
     { passive: false },
   );
@@ -543,18 +556,101 @@ function bindEvents() {
   let scrollTimer;
   elements.scroller.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(placeDetail, 120);
+    scrollTimer = setTimeout(movePopup, 120);
   });
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.selectedId) select(null);
   });
 
+  // 창 크기를 끌어서 바꾸는 동안에는 기다렸다가, 멈추면 한 번만 다시 그립니다. (매번 다시 그리면 버벅임)
+  let resizeTimer;
   window.addEventListener('resize', () => {
-    layoutGraph();
-    paint();
-    placeDetail();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      layoutGraph();
+      paint();
+      movePopup();
+    }, 150);
   });
+}
+
+// ---- 로드맵 가로 이동: 목표 위치까지 짧게 미끄러지듯 ----
+const smoothScroll = { target: null, current: 0, frame: 0 };
+const SCROLL_EASE = 0.2; // 한 프레임에 남은 거리의 몇 %를 움직일지
+
+// scrollGraphTo(기준 위치, 더할 거리) — 목표를 정하고 애니메이션을 시작합니다.
+function scrollGraphTo(base, delta = 0) {
+  const { scroller } = elements;
+  const max = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+  const target = Math.min(max, Math.max(0, base + delta));
+
+  // 동작 줄이기: 바로 이동
+  if (reducedMotion.matches) {
+    scroller.scrollLeft = target;
+    return;
+  }
+  if (smoothScroll.target === null) smoothScroll.current = scroller.scrollLeft;
+  smoothScroll.target = target;
+  if (!smoothScroll.frame) smoothScroll.frame = requestAnimationFrame(stepSmoothScroll);
+}
+
+function stepSmoothScroll() {
+  const { scroller } = elements;
+  const distance = smoothScroll.target - smoothScroll.current;
+  if (Math.abs(distance) < 0.5) {
+    scroller.scrollLeft = smoothScroll.target;
+    Object.assign(smoothScroll, { target: null, frame: 0 });
+    return;
+  }
+  // 소수점 위치를 직접 기억해 둠 (scrollLeft는 정수로 반올림돼 아주 작은 이동이 멈출 수 있음)
+  smoothScroll.current += distance * SCROLL_EASE;
+  scroller.scrollLeft = smoothScroll.current;
+  smoothScroll.frame = requestAnimationFrame(stepSmoothScroll);
+}
+
+// ---- 페이지 높이 붙잡기 ----
+// 팝업은 로드맵 아래로 펼쳐져 페이지를 길게 만듭니다. 닫거나 위로 옮길 때 페이지가 갑자기 짧아지면
+// 브라우저가 스크롤 위치를 억지로 끌어올려 화면이 "툭" 움직입니다.
+// 그래서 바뀌기 전 높이를 붙잡아 두고, 화면을 억지로 옮기지 않습니다.
+// 남은 빈 공간은 사용자가 직접 위로 스크롤하는 만큼만 줄여 나갑니다. (강제 이동 0)
+let releaseTimer;
+
+function holdPageHeight() {
+  clearTimeout(releaseTimer);
+  window.removeEventListener('scroll', shrinkHeldHeight);
+  const height = document.documentElement.scrollHeight;
+  const held = parseFloat(document.body.style.minHeight) || 0;
+  document.body.style.minHeight = `${Math.max(height, held)}px`;
+}
+
+// 팝업까지 포함한 "원래 필요한" 페이지 높이 (문서 좌표)
+function naturalPageHeight() {
+  const { detail } = elements;
+  const pageBottom = document.querySelector('.major-map').getBoundingClientRect().bottom + window.scrollY;
+  if (detail.hidden) return pageBottom;
+  const stageTop = elements.stage.getBoundingClientRect().top + window.scrollY;
+  return Math.max(pageBottom, stageTop + parseFloat(detail.style.top) + detail.offsetHeight + 24);
+}
+
+// 지금 보이는 화면 아래 끝까지는 남겨 두고, 그보다 아래 빈 공간만 줄입니다.
+function shrinkHeldHeight() {
+  const natural = naturalPageHeight();
+  const visibleBottom = window.scrollY + window.innerHeight;
+  if (visibleBottom <= natural + 1) {
+    document.body.style.minHeight = '';
+    window.removeEventListener('scroll', shrinkHeldHeight);
+    return;
+  }
+  document.body.style.minHeight = `${Math.ceil(visibleBottom)}px`;
+}
+
+function releasePageHeight(delay) {
+  clearTimeout(releaseTimer);
+  releaseTimer = setTimeout(() => {
+    shrinkHeldHeight();
+    if (document.body.style.minHeight) window.addEventListener('scroll', shrinkHeldHeight, { passive: true });
+  }, delay);
 }
 
 // 로드맵 크기 맞추기
