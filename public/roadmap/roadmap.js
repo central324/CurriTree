@@ -1,6 +1,7 @@
 // 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 선택·트랙 필터를 처리합니다.
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
-import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdges } from '/roadmap/positions.js';
+import { choosePopupPosition } from '/roadmap/popup-position.js';
+import { computePositions, DEFAULT_DIMS, routeEdges } from '/roadmap/positions.js';
 
 const CYTOSCAPE_URL = 'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.mjs';
 const DEPARTMENT_ID = 'ce';
@@ -28,6 +29,8 @@ const elements = {
   source: document.getElementById('roadmap-source'),
   filter: document.getElementById('track-filter'),
   select: document.getElementById('course-select'),
+  stage: document.getElementById('roadmap-stage'),
+  legend: document.getElementById('roadmap-legend'),
   scroller: document.getElementById('roadmap-scroller'),
   graph: document.getElementById('roadmap-graph'),
   status: document.getElementById('roadmap-status'),
@@ -60,25 +63,38 @@ function readTokens() {
   };
 }
 
+// 동작 줄이기를 켠 사용자에게는 애니메이션 없이 바로 바뀌게 합니다.
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const HIGHLIGHT_MS = 320; // 과목을 눌렀을 때 강조가 자연스럽게 바뀌는 시간 (Cytoscape는 밀리초 단위)
+
 function graphStyle(color) {
+  const duration = reducedMotion.matches ? 0 : HIGHLIGHT_MS;
+  const transition = (properties) => ({
+    'transition-property': properties,
+    'transition-duration': duration,
+    'transition-timing-function': 'ease-in-out-sine',
+  });
+
   return [
     {
       selector: 'node.course',
       style: {
         shape: 'round-rectangle',
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
+        width: 'data(w)',
+        height: 'data(h)',
         'background-color': color.surface,
         'border-width': 1,
         'border-color': color.line,
         label: 'data(label)',
         color: color.ink,
         'font-family': color.font,
-        'font-size': 13,
+        'font-size': 16,
         'text-valign': 'center',
         'text-halign': 'center',
         'text-wrap': 'wrap',
-        'text-max-width': NODE_WIDTH - 12,
+        'text-overflow-wrap': 'anywhere', // 띄어쓰기 없는 긴 과목명도 상자 안에서 줄바꿈
+        'text-max-width': 'data(textWidth)',
+        ...transition('opacity, background-color, border-color, border-width, color'),
       },
     },
     {
@@ -109,7 +125,7 @@ function graphStyle(color) {
       selector: 'node.term',
       style: {
         shape: 'rectangle',
-        width: NODE_WIDTH,
+        width: 'data(w)',
         height: 24,
         'background-opacity': 0,
         label: 'data(label)',
@@ -132,6 +148,7 @@ function graphStyle(color) {
         'arrow-scale': 0.9,
         'line-color': color.line,
         'target-arrow-color': color.line,
+        ...transition('opacity, line-color, target-arrow-color, width'),
       },
     },
     { selector: 'edge.straight', style: { 'curve-style': 'straight' } },
@@ -196,7 +213,7 @@ function buildElements(curriculum, positions) {
     nodes.push({
       group: 'nodes',
       classes: 'term',
-      data: { id: header.id, label: header.label, parent: parentOf(header.year) },
+      data: { id: header.id, label: header.label, parent: parentOf(header.year), w: positions.dims.nodeWidth },
       position: { x: header.x, y: header.y },
       selectable: false,
     });
@@ -207,7 +224,15 @@ function buildElements(curriculum, positions) {
     nodes.push({
       group: 'nodes',
       classes: 'course',
-      data: { id: course.id, label: course.name, category: course.category, parent: parentOf(year) },
+      data: {
+        id: course.id,
+        label: course.name,
+        category: course.category,
+        parent: parentOf(year),
+        w: positions.dims.nodeWidth,
+        h: positions.dims.nodeHeight,
+        textWidth: positions.dims.nodeWidth - 16,
+      },
       position: { x, y },
     });
   }
@@ -297,8 +322,7 @@ function courseList(ids, emptyText) {
 function renderDetail() {
   const course = state.courseById.get(state.selectedId);
   if (!course) {
-    elements.detail.hidden = true;
-    elements.detail.innerHTML = '';
+    closeDetail();
     return;
   }
 
@@ -344,17 +368,99 @@ function renderDetail() {
     </p>
     ${unknownNote}`;
 
-  elements.detail.hidden = false;
-  placeDetail();
+  openDetail();
 }
 
-// 팝업 위치: 로드맵 왼쪽 아래 빈 곳(1학년 묶음 바로 아래)에서 시작해 아래로 펼칩니다. 로드맵 창 밖으로 나가도 됩니다.
+// ---- 과목 정보 팝업 ----
+// 열기: 자리를 정한 뒤 살짝 아래에서 떠오르며 나타남 / 다른 과목 선택: 새 자리로 부드럽게 이동 / 닫기: 흐려지며 사라짐
+const POPUP_MS = 200; // roadmap.css의 --popup-duration과 같은 값
+let closeTimer;
+
+function openDetail() {
+  const { detail } = elements;
+  clearTimeout(closeTimer);
+  const wasOpen = !detail.hidden && detail.classList.contains('is-open');
+  detail.hidden = false;
+
+  if (wasOpen) {
+    placeDetail();
+    return;
+  }
+  detail.classList.add('is-placing'); // 처음 열 때는 자리 이동 애니메이션 없이 바로 그 자리에
+  placeDetail();
+  void detail.offsetWidth; // 닫힌 모습을 먼저 그리게 해서 나타나는 애니메이션이 보이도록 함
+  detail.classList.remove('is-placing');
+  detail.classList.add('is-open');
+}
+
+function closeDetail() {
+  const { detail } = elements;
+  detail.classList.remove('is-open');
+  clearTimeout(closeTimer);
+  const hide = () => {
+    if (!detail.classList.contains('is-open')) {
+      detail.hidden = true;
+      detail.innerHTML = '';
+    }
+  };
+  // 동작 줄이기: 기다리지 않고 바로 숨김
+  if (reducedMotion.matches) hide();
+  else closeTimer = setTimeout(hide, POPUP_MS);
+}
+
+// 화면에 그려진 선택 과목·관련 과목·강조 화살표·범례를 "가리면 안 되는 상자"로 모읍니다. (로드맵 창 기준 좌표)
+function protectedBoxes() {
+  const { cy } = state;
+  const { scroller, stage, legend } = elements;
+  const offsetX = scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft;
+  const offsetY = scroller.offsetTop + scroller.clientTop;
+  const zoom = cy.zoom();
+  const pan = cy.pan();
+  const toStage = (point) => ({ x: point.x * zoom + pan.x + offsetX, y: point.y * zoom + pan.y + offsetY });
+  const inflate = (box, size) => ({ x1: box.x1 - size, y1: box.y1 - size, x2: box.x2 + size, y2: box.y2 + size });
+
+  const boxes = [];
+  cy.nodes('.is-selected, .is-related').forEach((node) => {
+    const box = node.renderedBoundingBox({ includeLabels: false });
+    boxes.push(inflate({ x1: box.x1 + offsetX, y1: box.y1 + offsetY, x2: box.x2 + offsetX, y2: box.y2 + offsetY }, 8));
+  });
+  cy.edges('.is-path').forEach((edge) => {
+    const points = [edge.sourceEndpoint(), ...(edge.segmentPoints() ?? []), edge.targetEndpoint()].map(toStage);
+    for (let i = 1; i < points.length; i += 1) {
+      const [a, b] = [points[i - 1], points[i]];
+      boxes.push(inflate({ x1: Math.min(a.x, b.x), y1: Math.min(a.y, b.y), x2: Math.max(a.x, b.x), y2: Math.max(a.y, b.y) }, 8));
+    }
+  });
+
+  const stageBox = stage.getBoundingClientRect();
+  const legendBox = legend.getBoundingClientRect();
+  if (legendBox.width > 0 && getComputedStyle(legend).position === 'absolute') {
+    boxes.push(inflate({ x1: legendBox.left - stageBox.left, y1: legendBox.top - stageBox.top, x2: legendBox.right - stageBox.left, y2: legendBox.bottom - stageBox.top }, 8));
+  }
+  return boxes;
+}
+
+// 팝업 위치: 강조된 경로(선택 과목·관련 과목·화살표)를 가리지 않는 자리 중 선택 과목에 가장 가까운 곳.
+// 다른(흐리게 된) 과목은 가려도 됩니다. 로드맵 창 아래로 넘어가도 됩니다.
 function placeDetail() {
-  if (elements.detail.hidden) return;
-  const firstYear = state.cy.nodes('.year').first();
-  const below = firstYear.nonempty() ? firstYear.renderedBoundingBox().y2 + 16 : 0;
-  const top = Math.max(below, elements.scroller.clientHeight * 0.35);
-  elements.detail.style.top = `${Math.round(top)}px`;
+  const { detail, scroller } = elements;
+  if (detail.hidden || !state.selectedId) return;
+
+  const node = state.cy.getElementById(state.selectedId);
+  const center = node.renderedPosition();
+  const anchor = {
+    x: center.x + scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft,
+    y: center.y + scroller.offsetTop + scroller.clientTop,
+  };
+  const { left, top } = choosePopupPosition({
+    area: { width: elements.stage.clientWidth, height: scroller.offsetTop + scroller.offsetHeight },
+    popup: { width: detail.offsetWidth, height: detail.offsetHeight },
+    obstacles: protectedBoxes(),
+    anchor,
+    minTop: scroller.offsetTop + 12,
+  });
+  detail.style.left = `${left}px`;
+  detail.style.top = `${top}px`;
 }
 
 // reveal: 목록·상세 패널에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.
@@ -433,39 +539,88 @@ function bindEvents() {
     { passive: false },
   );
 
+  // 가로로 스크롤하면 강조된 경로의 화면 위치가 바뀌므로, 스크롤이 멈추면 팝업 자리를 다시 고릅니다.
+  let scrollTimer;
+  elements.scroller.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(placeDetail, 120);
+  });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.selectedId) select(null);
   });
 
   window.addEventListener('resize', () => {
     layoutGraph();
+    paint();
     placeDetail();
   });
 }
 
-// 그래프 전체 높이를 로드맵 창 높이에 딱 맞추고(상하 스크롤 없음), 넓이는 그만큼 늘려 가로 스크롤로 봅니다.
+// 로드맵 크기 맞추기
+// 1) 높이: 그래프 전체 높이를 로드맵 창 높이에 딱 맞춥니다(상하 스크롤 없음). → 확대 비율이 정해짐
+// 2) 넓이: 창이 넓어 공간이 남으면 과목 상자와 칸 사이 간격을 넓혀 창 가로를 채웁니다.
+//    창이 좁으면 기본 크기 그대로 두고 가로 스크롤로 봅니다.
 // 사용자가 확대·축소하거나 끌어서 옮기는 기능은 끕니다.
 const GRAPH_PADDING = 24;
-const GRAPH_PADDING_TOP = 56; // 위에 겹쳐 둔 범례 상자만큼 띄움
-const MAX_ZOOM = 1.4;
+const GRAPH_PADDING_TOP = 64; // 위에 겹쳐 둔 범례 상자만큼 띄움
+const MAX_ZOOM = 1.3;
+const MAX_NODE_WIDTH = 250; // 과목 상자를 넓힐 수 있는 최대 너비
+const MAX_GAP_SCALE = 2.5; // 칸 사이 간격을 넓힐 수 있는 최대 배율
+
+function renderLayout(dims) {
+  const layout = computePositions(state.curriculum.courses, dims);
+  state.cy.batch(() => {
+    state.cy.elements().remove();
+    state.cy.add(buildElements(state.curriculum, layout));
+  });
+  return layout;
+}
+
+// 남는 가로 공간(모델 좌표 extra)을 과목 상자 너비 → 칸 사이 간격 순서로 나눠 줍니다.
+function stretchDims(layout, extra) {
+  const { dims, columns } = layout;
+  const gapTotal = columns.slice(1).reduce((sum, x, index) => sum + (x - columns[index] - dims.nodeWidth), 0);
+  const nodeExtra = Math.min(MAX_NODE_WIDTH - dims.nodeWidth, (extra * 0.5) / columns.length);
+  const gapScale = Math.min(MAX_GAP_SCALE, 1 + (extra - nodeExtra * columns.length) / gapTotal);
+  const nodeWidth = dims.nodeWidth + Math.max(0, nodeExtra);
+  return {
+    ...dims,
+    nodeWidth,
+    columnWidth: nodeWidth + (dims.columnWidth - dims.nodeWidth) * gapScale,
+    yearGap: dims.yearGap * gapScale,
+  };
+}
 
 function layoutGraph() {
   const { cy } = state;
   const { scroller, graph } = elements;
-  const box = cy.elements().boundingBox();
-  let zoom = 1;
 
-  // 두 번 계산: 넓이를 정하면 가로 스크롤바가 생겨 보이는 높이가 줄어들기 때문
-  for (let pass = 0; pass < 2; pass += 1) {
-    graph.style.height = '0px';
-    const available = scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING;
-    zoom = Math.min(MAX_ZOOM, available / box.h);
-    graph.style.width = `${Math.ceil(box.w * zoom + GRAPH_PADDING * 2)}px`;
+  // 기본 크기로 그려서 높이 기준 확대 비율을 구함
+  graph.style.width = '100%';
+  graph.style.height = '0px';
+  let layout = renderLayout(DEFAULT_DIMS);
+  let box = cy.elements().boundingBox();
+  let zoom = Math.min(MAX_ZOOM, (scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING) / box.h);
+
+  // 남는 가로 공간이 있으면 상자·간격을 넓혀 다시 그림
+  const extra = (scroller.clientWidth - GRAPH_PADDING * 2) / zoom - box.w;
+  if (extra > 1) {
+    layout = renderLayout(stretchDims(layout, extra));
+    box = cy.elements().boundingBox();
   }
+
+  // 넓이를 정한 뒤 가로 스크롤바가 생기면 보이는 높이가 줄어드므로 한 번 더 맞춤 (창에 꼭 맞으면 스크롤바 없음)
+  const widthFor = (z) => Math.min(Math.ceil(box.w * z + GRAPH_PADDING * 2), extra > 1 ? scroller.clientWidth : Infinity);
+  graph.style.width = `${widthFor(zoom)}px`;
+  zoom = Math.min(MAX_ZOOM, (scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING) / box.h);
+  graph.style.width = `${widthFor(zoom)}px`;
   graph.style.height = `${scroller.clientHeight}px`;
+
   cy.resize();
   cy.zoom(zoom);
   cy.pan({ x: GRAPH_PADDING - box.x1 * zoom, y: GRAPH_PADDING_TOP - box.y1 * zoom });
+  state.layout = layout;
 }
 
 async function loadCurriculum() {
@@ -490,12 +645,11 @@ async function start() {
   state.graph = buildCourseGraph(curriculum.courses);
 
   const sourceDate = curriculum.source?.verifiedAt ? ` · ${curriculum.source.verifiedAt} 확인` : '';
-  elements.source.textContent = `${curriculum.department.name} ${curriculum.catalogYear}학년도 교육과정 기준${sourceDate}. 과목을 누르면 먼저 들어야 할 과목과 이어서 들을 과목이 표시됩니다. 마우스 휠이나 아래 스크롤바로 좌우를 이동합니다.`;
+  elements.source.textContent = `${curriculum.department.name} ${curriculum.catalogYear}학년도 교육과정 기준${sourceDate}. 과목을 누르면 선행·후속 과목이 강조됩니다.`;
 
   elements.status.hidden = true;
   state.cy = cytoscape({
     container: elements.graph,
-    elements: buildElements(curriculum, computePositions(curriculum.courses)),
     style: graphStyle(readTokens()),
     layout: { name: 'preset' },
     userZoomingEnabled: false,

@@ -94,8 +94,8 @@ function edgesOf(courses) {
 }
 
 // 각 화살표를 [붙는 곳, 꺾이는 점…, 붙는 곳] 선분 목록으로
-function segmentsOf(courses) {
-  const layout = computePositions(courses);
+function segmentsOf(courses, dims) {
+  const layout = computePositions(courses, dims);
   const edges = edgesOf(courses);
   const routes = routeEdges(edges, layout);
   const segments = [];
@@ -150,6 +150,19 @@ describe('routeEdges (화살표 길 찾기)', () => {
         const crossesY = overlapLength(span(a.y, b.y), [box.y - NODE_HEIGHT / 2, box.y + NODE_HEIGHT / 2]) >= 0;
         assert.ok(!(crossesX && crossesY), `${edge.id} → ${id}`);
       }
+    }
+  });
+
+  test('넓은 화면에 맞춰 상자·간격을 늘려도 겹침·대각선이 없다', () => {
+    const { courses } = loadRealCurriculum();
+    for (const dims of [
+      { nodeWidth: 230, columnWidth: 380, yearGap: 120 },
+      { nodeWidth: 250, columnWidth: 430, yearGap: 130 },
+    ]) {
+      const { segments, layout } = segmentsOf(courses, dims);
+      assert.equal(layout.dims.nodeWidth, dims.nodeWidth);
+      assert.deepEqual(overlappingPairs(segments), [], JSON.stringify(dims));
+      for (const { edge, a, b } of segments) assert.ok(a.x === b.x || a.y === b.y, edge.id);
     }
   });
 

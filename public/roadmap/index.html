@@ -21,6 +21,8 @@
 
   <body>
     <main class="major-map">
+      <!-- 제목과 보기 설정을 한 줄에 두어 로드맵 창 높이를 최대한 확보합니다. (좁으면 줄바꿈) -->
+      <div class="major-map__top">
       <header class="major-map__header">
         <h1>전공 로드맵</h1>
         <p id="roadmap-source">과목을 누르면 먼저 들어야 할 과목과 이어서 들을 과목이 표시됩니다.</p>
@@ -39,10 +41,11 @@
           </select>
         </label>
       </section>
+      </div>
 
-      <!-- 로드맵 창: 범례는 그래프 위에 겹쳐 두고, 과목 정보는 과목을 고르면 그래프 왼쪽 아래에 팝업으로 뜹니다. -->
+      <!-- 로드맵 창: 범례는 그래프 위에 겹쳐 두고, 과목 정보는 과목을 고르면 강조된 경로를 가리지 않는 자리에 팝업으로 뜹니다. -->
       <div class="major-map__stage" id="roadmap-stage">
-        <ul class="major-map__legend" aria-label="범례">
+        <ul class="major-map__legend" id="roadmap-legend" aria-label="범례">
           <li><span class="legend-line legend-line--hard"></span>필수 선수</li>
           <li><span class="legend-line legend-line--recommended"></span>권장 선행</li>
           <li><span class="legend-node"></span>전공필수</li>

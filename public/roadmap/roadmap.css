@@ -11,6 +11,19 @@
   padding: var(--space-6) var(--space-6) var(--space-12);
 }
 
+.major-map__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-8);
+}
+
+.major-map__header {
+  flex: 1 1 360px;
+  max-width: 760px;
+}
+
 .major-map__header h1 {
   margin: 0 0 var(--space-1);
   font-size: 32px;
@@ -98,7 +111,7 @@
 
 /* 그래프 창: 화면 높이 대부분을 쓰고, 넘치는 넓이는 가로 스크롤 (상하 스크롤·확대·끌기 없음) */
 .major-map__scroller {
-  height: max(520px, calc(100vh - 230px));
+  height: max(520px, calc(100vh - 170px));
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -128,11 +141,20 @@
   color: var(--color-ink-muted);
 }
 
-/* 과목 정보 팝업: 평소엔 숨김. 과목을 고르면 그래프 왼쪽 아래 빈 곳에서 시작해 아래로 펼쳐짐 (창 밖으로 나가도 됨) */
+/* 과목 정보 팝업: 평소엔 숨김. 과목을 고르면 강조된 경로를 가리지 않는 자리에 뜸 (위치는 roadmap.js가 계산, 창 밖으로 나가도 됨)
+   열릴 때 살짝 아래에서 떠오르고, 다른 과목을 고르면 새 자리로 부드럽게 이동 */
 .course-detail {
+  --popup-duration: 200ms; /* roadmap.js의 POPUP_MS와 같은 값 */
   position: absolute;
   left: var(--space-4);
   z-index: 3;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--popup-duration) ease-out,
+    transform var(--popup-duration) ease-out,
+    left 260ms ease-in-out,
+    top 260ms ease-in-out;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -147,6 +169,23 @@
 
 .course-detail[hidden] {
   display: none;
+}
+
+.course-detail.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* 처음 열 때는 자리를 옮기는 애니메이션 없이 바로 그 자리에 놓음 */
+.course-detail.is-placing {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-detail {
+    transform: none;
+    transition: none;
+  }
 }
 
 .course-detail__empty {

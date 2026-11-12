@@ -5,12 +5,22 @@
 //   - recommendedTerm "1"    → 1학년 묶음의 두 칸 가운데 (학기 무관 과목), 학기 과목들 아래
 //   - recommendedTerm null   → 맨 오른쪽 "학기 미정" 묶음
 
-export const NODE_WIDTH = 150;
-export const NODE_HEIGHT = 40;
-export const COLUMN_WIDTH = 210; // 같은 학년 안 학기 칸 사이 거리 (과목 사이 빈칸 60px에 화살표 여러 개가 나란히 지나감)
-export const YEAR_GAP = 50; // 학년 묶음 사이 추가 거리
-export const ROW_HEIGHT = 72; // 행 사이 틈 32px에 가로 화살표 여러 개가 나란히 지나감
-export const HEADER_OFFSET = 64; // 학기 제목과 첫 과목 사이 거리 (첫 행 위에도 가로 통로가 생기도록)
+// 기본 크기. 화면이 넓으면 화면 쪽에서 nodeWidth·columnWidth·yearGap을 늘려 넘깁니다(computePositions의 dims).
+export const NODE_WIDTH = 200;
+export const NODE_HEIGHT = 52;
+export const COLUMN_WIDTH = 272; // 같은 학년 안 학기 칸 사이 거리 (과목 사이 빈칸 72px에 화살표 여러 개가 나란히 지나감)
+export const YEAR_GAP = 52; // 학년 묶음 사이 추가 거리
+export const ROW_HEIGHT = 86; // 행 사이 틈 34px에 가로 화살표 여러 개가 나란히 지나감
+export const HEADER_OFFSET = 74; // 학기 제목과 첫 과목 사이 거리 (첫 행 위에도 가로 통로가 생기도록)
+
+export const DEFAULT_DIMS = {
+  nodeWidth: NODE_WIDTH,
+  nodeHeight: NODE_HEIGHT,
+  columnWidth: COLUMN_WIDTH,
+  yearGap: YEAR_GAP,
+  rowHeight: ROW_HEIGHT,
+  headerOffset: HEADER_OFFSET,
+};
 
 const YEARS = [1, 2, 3, 4];
 const SEMESTERS = [1, 2];
@@ -28,9 +38,14 @@ function parseTerm(course) {
  * - courses: Map<courseId, { x, y, year }>  (year: 1~4, 학기 미정이면 null)
  * - years: [{ id, label, year }]            학년 묶음 (과목이 있는 학년만, 학기 미정은 마지막)
  * - headers: [{ id, label, year, x, y }]    학기 칸 제목
- * - width, height: 노드 중심 기준 전체 크기
+ * - width, height: 과목 상자 바깥 기준 전체 크기
+ * - dims: 배치에 쓴 크기 (routeEdges가 같은 값을 씀)
+ * dims: DEFAULT_DIMS 중 바꿀 값만 넘깁니다.
  */
-export function computePositions(courses) {
+export function computePositions(courses, dimsOverride = {}) {
+  const dims = { ...DEFAULT_DIMS, ...dimsOverride };
+  const { nodeWidth: NODE_WIDTH, nodeHeight: NODE_HEIGHT, columnWidth: COLUMN_WIDTH, yearGap: YEAR_GAP } = dims;
+  const { rowHeight: ROW_HEIGHT, headerOffset: HEADER_OFFSET } = dims;
   const groups = new Map(); // year → { 1: [], 2: [], whole: [] }
   const unknown = [];
 
@@ -89,6 +104,7 @@ export function computePositions(courses) {
     columns: headers.map((header) => header.x).sort((a, b) => a - b),
     width: Math.max(0, left - YEAR_GAP - COLUMN_WIDTH + NODE_WIDTH),
     height: HEADER_OFFSET + Math.max(0, maxRows - 1) * ROW_HEIGHT + NODE_HEIGHT,
+    dims,
   };
 }
 
@@ -104,26 +120,25 @@ export function computePositions(courses) {
 //            └──── (가로 통로, 트랙별 y) ────┘
 // ---------------------------------------------------------------------------
 
-export const TRACK_SPACING = 8; // 나란히 지나가는 화살표 사이 거리
-export const PORT_SPACING = 8; // 한 과목 옆면에 붙는 화살표 사이 거리
-const PORT_LIMIT = NODE_HEIGHT / 2 - 5; // 포트가 상자 모서리에 너무 붙지 않도록
+export const TRACK_SPACING = 10; // 나란히 지나가는 화살표 사이 거리
+export const PORT_SPACING = 8; // 한 과목 옆면에 붙는 화살표 사이 거리 (격자 자리가 모자랄 때)
 const TRACK_MARGIN = 10; // 같은 트랙을 이어 쓸 때 위아래 최소 간격
 const GAP_PADDING = 10; // 통로 양끝에서 띄울 거리
 
 // 포트 높이 격자: 오른쪽 옆면은 0, ±10, ±20…, 왼쪽 옆면은 ±5, ±15…
 // 같은 행에서 마주 보는 "나가는 토막"과 "들어오는 토막"이 같은 높이가 되지 않도록 서로 어긋나게 둡니다.
 const PORT_GRID = 10;
-function portOffsets(count, side) {
+function portOffsets(count, side, limit) {
   const phase = side === 'right' ? 0 : PORT_GRID / 2;
   const candidates = [];
   for (let k = -3; k <= 3; k += 1) candidates.push(phase + k * PORT_GRID);
   const chosen = candidates
-    .filter((y) => Math.abs(y) <= PORT_LIMIT)
+    .filter((y) => Math.abs(y) <= limit)
     .sort((a, b) => Math.abs(a) - Math.abs(b) || a - b)
     .slice(0, count)
     .sort((a, b) => a - b);
   // 격자 자리가 모자라면(화살표가 아주 많으면) 고르게 압축
-  return chosen.length === count ? chosen : spread(count, PORT_SPACING, PORT_LIMIT);
+  return chosen.length === count ? chosen : spread(count, PORT_SPACING, limit);
 }
 
 // 개수만큼 가운데를 중심으로 고르게 나눈 위치(오프셋) 목록
@@ -168,6 +183,8 @@ function groupBy(list, keyOf) {
  *   - points: 꺾이는 점들의 절대 좌표 [{ x, y }] (붙는 곳 사이, 가로·세로 선분으로만 이어짐)
  */
 export function routeEdges(edges, layout) {
+  const { nodeWidth: NODE_WIDTH, nodeHeight: NODE_HEIGHT, columnWidth: COLUMN_WIDTH, rowHeight: ROW_HEIGHT } = layout.dims ?? DEFAULT_DIMS;
+  const portLimit = NODE_HEIGHT / 2 - 5; // 포트가 상자 모서리에 너무 붙지 않도록
   const half = NODE_WIDTH / 2;
   const columns = layout.columns;
   const count = columns.length;
@@ -210,7 +227,7 @@ export function routeEdges(edges, layout) {
     addToSide(route.edge.targetId, route.back ? 'right' : 'left', { route, end: 'target', other: route.source });
   }
   for (const [key, list] of sides) {
-    const offsets = portOffsets(list.length, key.endsWith('|right') ? 'right' : 'left');
+    const offsets = portOffsets(list.length, key.endsWith('|right') ? 'right' : 'left', portLimit);
     list
       .sort((a, b) => a.other.y - b.other.y || a.other.x - b.other.x)
       .forEach((item, index) => (item.route[`${item.end}Offset`] = offsets[index]));
