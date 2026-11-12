@@ -1,6 +1,6 @@
 // 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 선택·트랙 필터를 처리합니다.
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
-import { computePositions } from '/roadmap/positions.js';
+import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdge } from '/roadmap/positions.js';
 
 const CYTOSCAPE_URL = 'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.mjs';
 const DEPARTMENT_ID = 'ce';
@@ -28,6 +28,7 @@ const elements = {
   source: document.getElementById('roadmap-source'),
   filter: document.getElementById('track-filter'),
   select: document.getElementById('course-select'),
+  scroller: document.getElementById('roadmap-scroller'),
   graph: document.getElementById('roadmap-graph'),
   status: document.getElementById('roadmap-status'),
   detail: document.getElementById('course-detail'),
@@ -43,17 +44,19 @@ function showStatus(message) {
 // styles.css의 디자인 토큰 값을 읽어 그래프 색으로 씁니다. (색을 직접 쓰지 않기 위함)
 function readTokens() {
   const style = getComputedStyle(document.documentElement);
-  const token = (name) => style.getPropertyValue(name).trim();
+  const token = (name) => style.getPropertyValue(name).replace(/\s+/g, ' ').trim(); // 여러 줄 값(글꼴)도 한 줄로
   return {
+    bg: token('--color-bg'),
     surface: token('--color-surface'),
     ink: token('--color-ink'),
     muted: token('--color-ink-muted'),
     line: token('--color-line'),
+    lineSoft: token('--color-line-soft'),
     accent: token('--color-accent'),
     accentSoft: token('--color-accent-soft'),
     accentInk: token('--color-accent-ink'),
     error: token('--color-error'),
-    font: token('--font-sans'),
+    font: token('--font-sans').replace(/['"]/g, ''), // Cytoscape는 따옴표 있는 글꼴 이름을 받지 않음
   };
 }
 
@@ -63,8 +66,8 @@ function graphStyle(color) {
       selector: 'node.course',
       style: {
         shape: 'round-rectangle',
-        width: 150,
-        height: 44,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
         'background-color': color.surface,
         'border-width': 1,
         'border-color': color.line,
@@ -75,7 +78,7 @@ function graphStyle(color) {
         'text-valign': 'center',
         'text-halign': 'center',
         'text-wrap': 'wrap',
-        'text-max-width': 138,
+        'text-max-width': NODE_WIDTH - 12,
       },
     },
     {
@@ -83,10 +86,30 @@ function graphStyle(color) {
       style: { 'background-color': color.accentSoft, 'border-color': color.accent, 'border-width': 2, 'font-weight': 700 },
     },
     {
+      // 학년 묶음 상자 (안의 과목에 맞춰 크기가 자동으로 정해짐)
+      selector: 'node.year',
+      style: {
+        shape: 'round-rectangle',
+        'background-color': color.bg,
+        'border-width': 1,
+        'border-color': color.lineSoft,
+        padding: 16,
+        label: 'data(label)',
+        color: color.accent,
+        'font-family': color.font,
+        'font-size': 15,
+        'font-weight': 800,
+        'text-valign': 'top',
+        'text-halign': 'center',
+        'text-margin-y': -8,
+        events: 'no',
+      },
+    },
+    {
       selector: 'node.term',
       style: {
         shape: 'rectangle',
-        width: 150,
+        width: NODE_WIDTH,
         height: 24,
         'background-opacity': 0,
         label: 'data(label)',
@@ -99,14 +122,26 @@ function graphStyle(color) {
       },
     },
     {
+      // 화살표는 가로·세로 직선으로만 (꺾이는 점은 positions.js의 routeEdge). 과목 왼쪽·오른쪽 가운데에 붙습니다.
       selector: 'edge',
       style: {
         width: 1.5,
-        'curve-style': 'bezier',
+        'source-endpoint': `${NODE_WIDTH / 2}px 0px`,
+        'target-endpoint': `${-NODE_WIDTH / 2}px 0px`,
         'target-arrow-shape': 'triangle',
         'arrow-scale': 0.9,
         'line-color': color.line,
         'target-arrow-color': color.line,
+      },
+    },
+    { selector: 'edge.straight', style: { 'curve-style': 'straight' } },
+    {
+      selector: 'edge.bent',
+      style: {
+        'curve-style': 'segments',
+        'edge-distances': 'node-position',
+        'segment-weights': 'data(weights)',
+        'segment-distances': 'data(distances)',
       },
     },
     {
@@ -131,33 +166,69 @@ function graphStyle(color) {
   ];
 }
 
+// Cytoscape의 segments 선은 꺾이는 점을 "시작→끝 직선 위 비율(weight) + 직선에서 떨어진 거리(distance)"로 받습니다.
+function toSegmentData(source, target, points) {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const length = Math.hypot(dx, dy);
+  const weights = [];
+  const distances = [];
+  for (const point of points) {
+    const px = point.x - source.x;
+    const py = point.y - source.y;
+    weights.push((px * dx + py * dy) / (length * length));
+    distances.push((py * dx - px * dy) / length);
+  }
+  return { weights, distances };
+}
+
 function buildElements(curriculum, positions) {
-  const nodes = positions.columns.map((column) => ({
+  const parentOf = (year) => (year === null ? 'year:none' : `year:${year}`);
+
+  const nodes = positions.years.map((year) => ({
     group: 'nodes',
-    classes: 'term',
-    data: { id: `term:${column.term ?? 'none'}`, label: column.label },
-    position: { x: column.x, y: column.y },
+    classes: 'year',
+    data: { id: year.id, label: year.label },
     selectable: false,
-    grabbable: false,
   }));
 
-  for (const course of curriculum.courses) {
+  for (const header of positions.headers) {
     nodes.push({
       group: 'nodes',
-      classes: 'course',
-      data: { id: course.id, label: course.name, category: course.category },
-      position: positions.courses.get(course.id),
-      grabbable: false,
+      classes: 'term',
+      data: { id: header.id, label: header.label, parent: parentOf(header.year) },
+      position: { x: header.x, y: header.y },
+      selectable: false,
     });
   }
 
-  // 화살표 방향: 앞 과목 → 뒤 과목
+  for (const course of curriculum.courses) {
+    const { x, y, year } = positions.courses.get(course.id);
+    nodes.push({
+      group: 'nodes',
+      classes: 'course',
+      data: { id: course.id, label: course.name, category: course.category, parent: parentOf(year) },
+      position: { x, y },
+    });
+  }
+
+  // 화살표 방향: 앞 과목 → 뒤 과목. 꺾이는 점은 routeEdge가 정하고, Cytoscape 'segments' 형식으로 바꿔 넣습니다.
   const edges = [];
   for (const [courseId, previousList] of state.graph.previous) {
     for (const { courseId: previousId, relation } of previousList) {
+      const source = positions.courses.get(previousId);
+      const target = positions.courses.get(courseId);
+      const points = routeEdge(source, target, positions.columns);
       edges.push({
         group: 'edges',
-        data: { id: `${relation}:${previousId}->${courseId}`, source: previousId, target: courseId, relation },
+        classes: points.length === 0 ? 'straight' : 'bent',
+        data: {
+          id: `${relation}:${previousId}->${courseId}`,
+          source: previousId,
+          target: courseId,
+          relation,
+          ...toSegmentData(source, target, points),
+        },
       });
     }
   }
@@ -266,7 +337,7 @@ function renderDetail() {
     ${unknownNote}`;
 }
 
-// reveal: 목록·상세 패널에서 고른 과목이 그래프 화면 밖에 있으면 그 과목이 가운데 오도록 옮깁니다. (움직임 없이 바로)
+// reveal: 목록·상세 패널에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.
 function select(courseId, { reveal = false } = {}) {
   state.selectedId = state.courseById.has(courseId) ? courseId : null;
   elements.select.value = state.selectedId ?? '';
@@ -274,10 +345,10 @@ function select(courseId, { reveal = false } = {}) {
   renderDetail();
 
   if (reveal && state.selectedId) {
-    const node = state.cy.getElementById(state.selectedId);
-    const box = node.renderedBoundingBox();
-    const outside = box.x1 < 0 || box.y1 < 0 || box.x2 > state.cy.width() || box.y2 > state.cy.height();
-    if (outside) state.cy.center(node);
+    const { scroller } = elements;
+    const box = state.cy.getElementById(state.selectedId).renderedBoundingBox();
+    const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
+    if (outside) scroller.scrollLeft = (box.x1 + box.x2) / 2 - scroller.clientWidth / 2;
   }
 }
 
@@ -327,22 +398,47 @@ function bindEvents() {
     if (event.target.closest('[data-action="clear"]')) select(null);
   });
 
-  window.addEventListener('resize', fitGraph);
+  // 마우스 휠(세로)을 가로 스크롤로 바꿉니다. 끝까지 가면 원래대로 페이지가 스크롤됩니다.
+  elements.scroller.addEventListener(
+    'wheel',
+    (event) => {
+      const { scroller } = elements;
+      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      const maxLeft = scroller.scrollWidth - scroller.clientWidth;
+      const canMove = event.deltaY > 0 ? scroller.scrollLeft < maxLeft - 1 : scroller.scrollLeft > 0;
+      if (!canMove) return;
+      event.preventDefault();
+      scroller.scrollLeft += event.deltaY;
+    },
+    { passive: false },
+  );
+
+  window.addEventListener('resize', layoutGraph);
 }
 
-// 화면이 좁아 전체를 맞추면 글자가 너무 작아질 때는, 읽을 수 있는 크기로 두고 왼쪽 위부터 보여 줍니다. (나머지는 드래그로 이동)
-const MIN_READABLE_ZOOM = 0.75;
+// 그래프 높이를 보이는 영역 높이에 맞추고(확대 비율 고정), 넓이는 그만큼 늘려 가로 스크롤로 봅니다.
+// 사용자가 확대·축소하거나 끌어서 옮기는 기능은 끕니다.
 const GRAPH_PADDING = 24;
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 1;
 
-function fitGraph() {
+function layoutGraph() {
   const { cy } = state;
-  cy.resize();
-  cy.fit(undefined, GRAPH_PADDING);
-  if (cy.zoom() >= MIN_READABLE_ZOOM) return;
-
-  cy.zoom(MIN_READABLE_ZOOM);
+  const { scroller, graph } = elements;
   const box = cy.elements().boundingBox();
-  cy.pan({ x: GRAPH_PADDING - box.x1 * MIN_READABLE_ZOOM, y: GRAPH_PADDING - box.y1 * MIN_READABLE_ZOOM });
+  let zoom = 1;
+
+  // 두 번 계산: 넓이를 정하면 가로 스크롤바가 생겨 보이는 높이가 줄어들기 때문
+  for (let pass = 0; pass < 2; pass += 1) {
+    graph.style.height = '0px';
+    const available = scroller.clientHeight - GRAPH_PADDING * 2;
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, available / box.h));
+    graph.style.width = `${Math.ceil(box.w * zoom + GRAPH_PADDING * 2)}px`;
+  }
+  graph.style.height = `${Math.floor(Math.max(scroller.clientHeight, box.h * zoom + GRAPH_PADDING * 2))}px`;
+  cy.resize();
+  cy.zoom(zoom);
+  cy.pan({ x: GRAPH_PADDING - box.x1 * zoom, y: GRAPH_PADDING - box.y1 * zoom });
 }
 
 async function loadCurriculum() {
@@ -367,16 +463,16 @@ async function start() {
   state.graph = buildCourseGraph(curriculum.courses);
 
   const sourceDate = curriculum.source?.verifiedAt ? ` · ${curriculum.source.verifiedAt} 확인` : '';
-  elements.source.textContent = `${curriculum.department.name} ${curriculum.catalogYear}학년도 교육과정 기준${sourceDate}. 과목을 누르면 먼저 들어야 할 과목과 이어서 들을 과목이 표시됩니다.`;
+  elements.source.textContent = `${curriculum.department.name} ${curriculum.catalogYear}학년도 교육과정 기준${sourceDate}. 과목을 누르면 먼저 들어야 할 과목과 이어서 들을 과목이 표시됩니다. 마우스 휠이나 아래 스크롤바로 좌우를 이동합니다.`;
 
   elements.status.hidden = true;
   state.cy = cytoscape({
     container: elements.graph,
     elements: buildElements(curriculum, computePositions(curriculum.courses)),
     style: graphStyle(readTokens()),
-    layout: { name: 'preset', padding: 24 },
-    minZoom: 0.3,
-    maxZoom: 2,
+    layout: { name: 'preset' },
+    userZoomingEnabled: false,
+    userPanningEnabled: false,
     autoungrabify: true,
     boxSelectionEnabled: false,
   });
@@ -384,7 +480,7 @@ async function start() {
   renderFilter();
   renderSelect();
   bindEvents();
-  fitGraph();
+  layoutGraph();
   paint();
 }
 
