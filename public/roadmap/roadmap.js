@@ -122,7 +122,7 @@ function graphStyle(color) {
       },
     },
     {
-      // 화살표는 가로·세로 직선으로만 (꺾이는 점은 positions.js의 routeEdge). 과목 왼쪽·오른쪽 가운데에 붙습니다.
+      // 화살표는 가로·세로 직선으로만. 붙는 곳(포트)과 꺾이는 점은 positions.js의 routeEdges가 정합니다.
       selector: 'edge',
       style: {
         width: 1.5,
