@@ -112,7 +112,7 @@ export function validateCurriculum(data) {
     if (!CATEGORIES.includes(course.category)) fail(`${at}.category`, `허용되지 않은 이수구분: ${course.category}`);
 
     if (course.recommendedTerm !== null && !(typeof course.recommendedTerm === 'string' && RECOMMENDED_TERM_PATTERN.test(course.recommendedTerm))) {
-      fail(`${at}.recommendedTerm`, '1-1 ~ 4-2 형식 또는 null이어야 합니다.');
+      fail(`${at}.recommendedTerm`, '1-1 ~ 4-2, 학년만(1 ~ 4) 또는 null이어야 합니다.');
     }
     if (course.offeredTerms !== null && !(isStringArray(course.offeredTerms) && course.offeredTerms.every((term) => OFFERED_TERMS.includes(term)))) {
       fail(`${at}.offeredTerms`, '"1", "2", "S", "W" 배열 또는 null이어야 합니다.');

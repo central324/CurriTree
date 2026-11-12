@@ -28,7 +28,7 @@
       "courseCodes": [],
       "credits": 3,
       "category": "unknown",
-      "recommendedTerm": null,
+      "recommendedTerm": "1",
       "offeredTerms": [
         "1",
         "2"
