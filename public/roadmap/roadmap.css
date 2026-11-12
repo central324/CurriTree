@@ -25,16 +25,10 @@
 }
 
 .major-map__header h1 {
-  margin: 0 0 var(--space-1);
+  margin: 0;
   font-size: 32px;
   font-weight: 800;
   color: var(--color-accent);
-}
-
-.major-map__header p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--color-ink-muted);
 }
 
 .major-map__toolbar {

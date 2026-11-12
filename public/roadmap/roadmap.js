@@ -26,7 +26,6 @@ const TAG_LABELS = {
 const OFFERED_LABELS = { 1: '1학기', 2: '2학기', S: '여름학기', W: '겨울학기' };
 
 const elements = {
-  source: document.getElementById('roadmap-source'),
   filter: document.getElementById('track-filter'),
   select: document.getElementById('course-select'),
   stage: document.getElementById('roadmap-stage'),
@@ -740,8 +739,6 @@ async function start() {
   state.courseById = new Map(curriculum.courses.map((course) => [course.id, course]));
   state.graph = buildCourseGraph(curriculum.courses);
 
-  const sourceDate = curriculum.source?.verifiedAt ? ` · ${curriculum.source.verifiedAt} 확인` : '';
-  elements.source.textContent = `${curriculum.department.name} ${curriculum.catalogYear}학년도 교육과정 기준${sourceDate}. 과목을 누르면 선행·후속 과목이 강조됩니다.`;
 
   elements.status.hidden = true;
   state.cy = cytoscape({
