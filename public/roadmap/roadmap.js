@@ -1,5 +1,6 @@
 // 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 선택·트랙 필터를 처리합니다.
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
+import { escapeHtml, formatOfferedTerms } from '/roadmap/html.js';
 import { choosePopupPosition } from '/roadmap/popup-position.js';
 import { computePositions, DEFAULT_DIMS, routeEdges } from '/roadmap/positions.js';
 
@@ -310,7 +311,7 @@ function paint() {
 
 function courseButton(courseId) {
   const course = state.courseById.get(courseId);
-  return `<li><button type="button" class="course-detail__link" data-course-id="${course.id}">${course.name}</button></li>`;
+  return `<li><button type="button" class="course-detail__link" data-course-id="${escapeHtml(course.id)}">${escapeHtml(course.name)}</button></li>`;
 }
 
 function courseList(ids, emptyText) {
@@ -338,22 +339,22 @@ function renderDetail() {
   const unknownNote =
     prerequisites.unknownCourseIds.length > 0
       ? `<p class="course-detail__note">필수 선수가 확인되지 않은 과목이 있어(${prerequisites.unknownCourseIds
-          .map((id) => state.courseById.get(id).name)
+          .map((id) => escapeHtml(state.courseById.get(id).name))
           .join(', ')}) 실제로는 더 많을 수 있습니다.</p>`
       : '';
 
-  const offered = course.offeredTerms.map((term) => OFFERED_LABELS[term] ?? term).join(', ') || '확인 필요';
-  const tags = course.tags.map((tag) => TAG_LABELS[tag] ?? tag).join(', ') || '없음';
+  const offered = escapeHtml(formatOfferedTerms(course.offeredTerms, OFFERED_LABELS));
+  const tags = escapeHtml(course.tags.map((tag) => TAG_LABELS[tag] ?? tag).join(', ') || '없음');
 
   elements.detail.innerHTML = `
     <header class="course-detail__head">
-      <span class="type ${isRequired ? 'type--required' : 'type--elective'}">${CATEGORY_LABELS[course.category] ?? course.category}</span>
-      <h2>${course.name}</h2>
+      <span class="type ${isRequired ? 'type--required' : 'type--elective'}">${escapeHtml(CATEGORY_LABELS[course.category] ?? course.category)}</span>
+      <h2>${escapeHtml(course.name)}</h2>
       <button type="button" class="button button--quiet course-detail__clear" data-action="clear">닫기</button>
     </header>
     <dl class="course-detail__facts">
-      <div><dt>학점</dt><dd>${course.credits}학점</dd></div>
-      <div><dt>권장 학기</dt><dd>${course.recommendedTerm ?? '확인 필요'}</dd></div>
+      <div><dt>학점</dt><dd>${escapeHtml(course.credits)}학점</dd></div>
+      <div><dt>권장 학기</dt><dd>${escapeHtml(course.recommendedTerm ?? '확인 필요')}</dd></div>
       <div><dt>개설 학기</dt><dd>${offered}</dd></div>
       <div><dt>진로 트랙</dt><dd>${tags}</dd></div>
     </dl>
@@ -494,7 +495,7 @@ function renderFilter() {
   elements.filter.innerHTML = options
     .map(
       (option) =>
-        `<button type="button" class="chip" data-track="${option.id}" aria-pressed="${option.id === state.track}">${option.label}</button>`,
+        `<button type="button" class="chip" data-track="${escapeHtml(option.id)}" aria-pressed="${option.id === state.track}">${escapeHtml(option.label)}</button>`,
     )
     .join('');
 }
@@ -503,7 +504,7 @@ function renderSelect() {
   const sorted = [...state.curriculum.courses].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   elements.select.innerHTML =
     '<option value="">과목을 고르세요</option>' +
-    sorted.map((course) => `<option value="${course.id}">${course.name}</option>`).join('');
+    sorted.map((course) => `<option value="${escapeHtml(course.id)}">${escapeHtml(course.name)}</option>`).join('');
   elements.select.disabled = false;
 }
 
