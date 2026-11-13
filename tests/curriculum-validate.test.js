@@ -23,6 +23,12 @@ describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
     );
   });
 
+  test('공학설계입문은 1학년 과목(학기 무관)으로 분류한다', () => {
+    const course = data.courses.find((item) => item.id === 'eng-design-intro');
+    assert.equal(course.recommendedTerm, '1');
+    assert.deepEqual(course.offeredTerms, ['1', '2']);
+  });
+
   test('26년 로드맵에 없는 인공지능프로그래밍 외에는 모두 3개 트랙 중 하나 이상에 속한다', () => {
     for (const course of data.courses.filter((item) => item.id !== 'ai-programming')) {
       assert.ok(course.tags.length > 0, course.id);
@@ -159,8 +165,15 @@ describe('오류 데이터', () => {
     assert.ok(reasons(data).some((reason) => reason.includes('순환')));
   });
 
+  test('recommendedTerm은 학년만(1 ~ 4) 적어도 된다', () => {
+    for (const recommendedTerm of ['1', '4', '2-1', null]) {
+      const data = makeCurriculum({ courses: [makeCourse({ id: 'a', recommendedTerm })] });
+      assert.ok(!fieldsOf(data).includes('courses[0].recommendedTerm'), String(recommendedTerm));
+    }
+  });
+
   test('recommendedTerm 형식 오류', () => {
-    for (const recommendedTerm of ['5-1', '1-3', '2026-1', '']) {
+    for (const recommendedTerm of ['5-1', '1-3', '2026-1', '', '5', '1-', '0']) {
       const data = makeCurriculum({ courses: [makeCourse({ id: 'a', recommendedTerm })] });
       assert.ok(fieldsOf(data).includes('courses[0].recommendedTerm'), recommendedTerm);
     }

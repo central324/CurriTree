@@ -5,7 +5,8 @@ export const SCHEMA_VERSION = 1;
 
 export const DEPARTMENT_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
 export const CURRICULUM_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-export const RECOMMENDED_TERM_PATTERN = /^[1-4]-[12]$/;
+// "2-1" = 2학년 1학기, "1" = 1학년 (학번·학기에 따라 1·2학기 중 언제든)
+export const RECOMMENDED_TERM_PATTERN = /^[1-4](?:-[12])?$/;
 export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const CATEGORIES = [
