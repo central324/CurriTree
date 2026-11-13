@@ -1,0 +1,300 @@
+/* 전공 로드맵 화면 (public/roadmap/) */
+
+/* 로드맵이 넓으므로 화면 너비를 거의 다 씁니다. */
+.major-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-12);
+}
+
+.major-map__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-8);
+}
+
+.major-map__header {
+  flex: 1 1 360px;
+  max-width: 760px;
+}
+
+.major-map__header h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.major-map__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-6);
+}
+
+.major-map__filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.major-map__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+
+.major-map__select {
+  min-width: 220px;
+}
+
+/* 로드맵 창: 범례와 과목 정보 팝업을 겹쳐 놓기 위한 기준 상자 */
+.major-map__stage {
+  position: relative;
+}
+
+/* 범례: 그래프 위 오른쪽 위에 겹쳐 둠 (가로 스크롤해도 제자리) */
+.major-map__legend {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.major-map__legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legend-line {
+  display: inline-block;
+  width: 24px;
+  border-top: 3px solid var(--color-error);
+}
+
+.legend-line--recommended {
+  border-top: 2px dashed var(--color-ink-muted);
+}
+
+.legend-node {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  border: 2px solid var(--color-accent);
+  border-radius: 4px;
+  background: var(--color-accent-soft);
+}
+
+/* 그래프 창: 화면 높이 대부분을 쓰고, 넘치는 넓이는 가로 스크롤 (상하 스크롤·확대·끌기 없음) */
+.major-map__scroller {
+  height: max(520px, calc(100vh - 170px));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+.major-map__scroller:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.major-map__graph {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.major-map__graph.is-pointer {
+  cursor: pointer;
+}
+
+.major-map__status {
+  margin: 0;
+  padding: var(--space-6);
+  color: var(--color-ink-muted);
+}
+
+/* 과목 정보 팝업: 평소엔 숨김. 과목을 고르면 강조된 경로를 가리지 않는 자리에 뜸 (위치는 roadmap.js가 계산, 창 밖으로 나가도 됨)
+   열릴 때 살짝 아래에서 떠오르고, 다른 과목을 고르면 새 자리로 부드럽게 이동 */
+.course-detail {
+  --popup-duration: 200ms; /* roadmap.js의 POPUP_MS와 같은 값 */
+  position: absolute;
+  left: var(--space-4);
+  z-index: 3;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--popup-duration) ease-out,
+    transform var(--popup-duration) ease-out,
+    left 260ms ease-in-out,
+    top 260ms ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(400px, calc(100% - var(--space-8)));
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-top: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 14px;
+}
+
+.course-detail[hidden] {
+  display: none;
+}
+
+.course-detail.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* 처음 열 때는 자리를 옮기는 애니메이션 없이 바로 그 자리에 놓음 */
+.course-detail.is-placing {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-detail {
+    transform: none;
+    transition: none;
+  }
+}
+
+.course-detail__empty {
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+.course-detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.course-detail__head h2 {
+  flex-basis: 100%;
+  order: 1;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.course-detail__clear {
+  margin-left: auto;
+  padding: var(--space-1) var(--space-2);
+  font-size: 13px;
+}
+
+.course-detail__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.course-detail__facts dt {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.course-detail__facts dd {
+  margin: 0;
+}
+
+.course-detail section h3 {
+  margin: 0 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-muted);
+}
+
+.course-detail__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-detail__link {
+  padding: 2px var(--space-2);
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-accent);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.course-detail__link:hover {
+  background: var(--color-line-soft);
+}
+
+.course-detail__none {
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+.course-detail__none--warn,
+.course-detail__note {
+  color: var(--color-warn);
+}
+
+.course-detail__summary,
+.course-detail__note {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.course-detail__note {
+  padding-top: 0;
+  border-top: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .major-map {
+    padding: var(--space-6) var(--space-4) var(--space-12);
+  }
+
+  .major-map__scroller {
+    height: max(420px, calc(100vh - 300px));
+  }
+
+  /* 좁은 화면: 범례는 그래프 위 한 줄로 */
+  .major-map__legend {
+    position: static;
+    margin-bottom: var(--space-2);
+  }
+
+  .course-detail {
+    left: var(--space-2);
+    width: calc(100% - var(--space-4));
+  }
+}

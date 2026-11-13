@@ -8,6 +8,7 @@ import { createAiMatchRouter } from './routes/ai.js';
 
 const defaultCurriculumDir = fileURLToPath(new URL('../data/curricula/', import.meta.url));
 const publicDirectory = fileURLToPath(new URL('../public/', import.meta.url));
+const sharedDirectory = fileURLToPath(new URL('../shared/', import.meta.url));
 
 /**
  * Express 앱을 만듭니다.
@@ -146,6 +147,8 @@ export function createApp({ curriculumDir = defaultCurriculumDir, logger = conso
 
   // 정적 파일 제공
   app.use(express.static(publicDirectory));
+  // 화면과 서버가 함께 쓰는 순수 함수 (예: /shared/curriculum/graph.js)
+  app.use('/shared', express.static(sharedDirectory));
 
   // 공통 오류 처리
   app.use((error, _request, response, _next) => {

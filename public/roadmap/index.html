@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="전공 로드맵 — 컴퓨터정보공학부 과목의 선행·후속 관계" />
+    <meta name="theme-color" content="#faf7ee" />
+
+    <title>전공 로드맵 | 커리트리</title>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/roadmap/roadmap.css" />
+    <script type="module" src="/layout.js"></script>
+    <script type="module" src="/roadmap/roadmap.js"></script>
+  </head>
+
+  <body>
+    <main class="major-map">
+      <!-- 제목과 보기 설정을 한 줄에 두어 로드맵 창 높이를 최대한 확보합니다. (좁으면 줄바꿈) -->
+      <div class="major-map__top">
+      <header class="major-map__header">
+        <h1>전공 로드맵</h1>
+      </header>
+
+      <section class="major-map__toolbar" aria-label="로드맵 보기 설정">
+        <div class="major-map__filter">
+          <span class="major-map__label" id="track-label">진로 트랙</span>
+          <div class="chips" id="track-filter" role="group" aria-labelledby="track-label"></div>
+        </div>
+
+        <label class="field major-map__select">
+          <span>과목 선택</span>
+          <select id="course-select" disabled>
+            <option value="">불러오는 중…</option>
+          </select>
+        </label>
+      </section>
+      </div>
+
+      <!-- 로드맵 창: 범례는 그래프 위에 겹쳐 두고, 과목 정보는 과목을 고르면 강조된 경로를 가리지 않는 자리에 팝업으로 뜹니다. -->
+      <div class="major-map__stage" id="roadmap-stage">
+        <ul class="major-map__legend" id="roadmap-legend" aria-label="범례">
+          <li><span class="legend-line legend-line--hard"></span>필수 선수</li>
+          <li><span class="legend-line legend-line--recommended"></span>권장 선행</li>
+          <li><span class="legend-node"></span>전공필수</li>
+        </ul>
+
+        <div class="major-map__scroller" id="roadmap-scroller" tabindex="0" aria-label="로드맵 그래프 (좌우로 스크롤)">
+          <div class="major-map__graph" id="roadmap-graph" role="img" aria-label="과목 선후수 관계 그래프. 과목 선택 목록으로도 같은 정보를 볼 수 있습니다.">
+            <p class="major-map__status" id="roadmap-status">교육과정을 불러오는 중입니다…</p>
+          </div>
+        </div>
+
+        <aside class="course-detail" id="course-detail" aria-live="polite" aria-label="과목 정보" hidden></aside>
+      </div>
+    </main>
+  </body>
+</html>
