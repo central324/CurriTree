@@ -11,7 +11,7 @@
 export const MENU = [
   { label: '커리메이커', href: '/maker/' },
   { label: 'KLAS 이수내역', href: '/klas/' },
-  { label: '메뉴2' },
+  { label: '전공 로드맵', href: '/roadmap/' },
 ];
 
 const MENU_ICON = `
