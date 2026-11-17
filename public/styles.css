@@ -147,7 +147,7 @@ a {
 }
 
 /* 사이드바 열고 닫기: 왼쪽에서 미끄러져 들어오고, 뒤 배경은 서서히 어두워집니다.
-   시간을 바꾸면 layout.js의 SLIDE_MS도 같이 바꿉니다. */
+   시간을 바꾸면 layout.js의 SIDEBAR_SLIDE_MS도 같이 바꿉니다. */
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
@@ -518,6 +518,7 @@ a.sidebar__link:hover {
 .roadmap [data-order='1'] { --order-index: 1; }
 .roadmap [data-order='2'] { --order-index: 2; }
 .roadmap [data-order='3'] { --order-index: 3; }
+.roadmap [data-order='4'] { --order-index: 4; }
 
 @keyframes roadmap-card-in {
   from {
