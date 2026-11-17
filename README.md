@@ -843,15 +843,64 @@ LLM API 키 등 필요한 환경변수는 `.env.example`을 참고하여 설정�
 
 LLM 기능은 실제 API 호출이 필요한 기능으로 구현하며, 호출 실패 시에도 수동 과목 입력과 이수요건 검증은 계속 사용할 수 있도록 합니다.
 
+
 ### 10.6 Docker 및 배포
 
-Docker 실행과 공개 배포는 수업 필수 요구사항입니다.
+CurriTree는 Docker 컨테이너에서 Express 서버와 프론트엔드를 함께 실행할 수 있습니다.
 
-Docker 관련 설정 및 실행 명령어는 배포 환경이 구성된 이후 이 문서에 추가합니다.
+현재 로컬 Docker 실행 환경이 구성되어 있으며, 공개 배포 및 CI 통합은 후속 작업에서 진행합니다. (Issue #26)
 
-실제 배포는 Express 서버와 프론트엔드가 함께 동작하는 형태로 진행하며, 무료 배포 환경의 메모리 제한을 고려합니다.
+#### Docker 이미지 빌드
 
-> 현재 저장소에는 초기 Express 서버와 기본 화면 및 테스트 환경이 구성되어 있습니다. 교육과정 조회, KLAS 입력, LLM 매칭, 이수요건 검증 등 주요 기능은 순차적으로 개발할 예정입니다.
+프로젝트 루트에서 실행합니다.
+
+```bash
+docker build -t curritree:local .
+```
+
+#### Docker 컨테이너 실행
+
+기본 실행:
+
+```bash
+docker run --rm --name curritree-local -p 3000:3000 curritree:local
+```
+
+Gemini AI 과목 추천 기능을 사용하려면 프로젝트 루트의 `.env` 파일에 `GEMINI_API_KEY`를 설정하고 다음과 같이 실행합니다.
+
+```bash
+docker run --rm --name curritree-local -p 3000:3000 --env-file .env curritree:local
+```
+
+`.env` 파일은 Docker 이미지에 포함하지 않으며, API 키는 실행 시 환경변수로 전달합니다.
+
+#### 접속 주소
+
+| 주소 | 기능 |
+| --- | --- |
+| `http://localhost:3000/` | 메인 화면 |
+| `http://localhost:3000/klas/` | KLAS 이수내역 |
+| `http://localhost:3000/maker/` | 커리메이커 |
+| `http://localhost:3000/roadmap/` | 전공 로드맵 |
+| `http://localhost:3000/api/health` | 서버 상태 확인 |
+
+#### 실행 및 보안 검증
+
+- Docker 이미지 빌드 및 컨테이너 실행 확인
+- 최신 main 기준 주요 화면 동작 확인
+- `.env` 환경변수 주입 후 Gemini AI 과목 추천 정상 동작 확인
+- `node` 사용자(uid=1000)로 컨테이너 실행 확인
+- `.dockerignore`로 비밀키 및 불필요한 개발 파일 제외
+
+컨테이너는 실행 중인 터미널에서 `Ctrl+C`로 종료할 수 있습니다. `--rm` 옵션을 사용하면 종료 시 컨테이너가 자동 삭제됩니다.
+
+#### 후속 작업
+
+- Docker 빌드 CI 구성
+- 배포 환경변수 및 비밀키 관리
+- 공개 HTTPS URL 배포
+- 배포 환경 통합 테스트
+
 
 
 
@@ -907,7 +956,7 @@ Docker 관련 설정 및 실행 명령어는 배포 환경이 구성된 이후 �
 - [x] 팀원별 계산 규칙 단위 테스트 작성
 - [x] KLAS 파싱 및 LLM 응답 검증 테스트 (#17)
 - [x] API 및 핵심 기능 통합 테스트
-- [ ] Docker 컨테이너 실행 환경 구성
+- [x] Docker 컨테이너 실행 환경 구성
 - [ ] 공개 URL 배포 및 실제 동작 확인
 
 ### 11.3 P1 — 주요 확장 기능
