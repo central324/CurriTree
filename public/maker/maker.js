@@ -2,6 +2,7 @@ import { consumeMakerHandoff } from '../klas/handoff.js';
 const departmentSelect = document.getElementById("department-select");
 const curriculumSelect = document.getElementById("curriculum-select");
 const curriculumNotice = document.getElementById("curriculum-notice");
+const majorCreditBasis = document.getElementById("major-credit-basis");
 const courseSearch = document.getElementById("course-search");
 const courseSelect = document.getElementById("course-select");
 
@@ -135,6 +136,7 @@ async function loadCurriculum() {
 
   currentCurriculum = null;
   currentPlan = null;
+  renderMajorCreditBasis(null);
   resetOtherCreditInputs();
   renderPlan();
   renderCreditSummary(null);
@@ -219,6 +221,7 @@ async function loadCurriculum() {
       ? "개발용 예시 교육과정입니다. 실제 졸업요건과 다를 수 있습니다."
       : `${curriculum.department.name} 교육과정을 불러왔습니다.`;
 
+    renderMajorCreditBasis(curriculum.requirements);
     renderCourseOptions();
     renderPlan();
 
@@ -245,6 +248,22 @@ async function loadCurriculum() {
     curriculumNotice.textContent =
       "교육과정을 불러오지 못했습니다: " + error.message;
   }
+}
+
+// 전공학점 검증 기준 안내 (다전공 학생이 결과를 잘못 읽지 않도록)
+function renderMajorCreditBasis(requirements) {
+  const credits = requirements?.minimumMajorCredits;
+
+  if (typeof credits !== "number") {
+    majorCreditBasis.hidden = true;
+    majorCreditBasis.textContent = "";
+    return;
+  }
+
+  majorCreditBasis.textContent =
+    `현재 전공학점 검증은 단일전공 ${credits}학점 기준입니다. ` +
+    "다전공 이수 시에는 주전공 기준 학점이 달라 결과가 다를 수 있습니다.";
+  majorCreditBasis.hidden = false;
 }
 
 // 4. 과목 검색 및 선택 목록 표시
