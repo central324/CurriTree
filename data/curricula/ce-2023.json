@@ -928,8 +928,8 @@
     }
   ],
   "requirements": {
-    "minimumTotalCredits": null,
-    "minimumMajorCredits": null,
+    "minimumTotalCredits": 133,
+    "minimumMajorCredits": 60,
     "minimumMajorElectiveCredits": null,
     "requiredCourseIds": [
       "digital-logic-1",

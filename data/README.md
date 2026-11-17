@@ -21,10 +21,14 @@
   - `linkedCourseIds`: 설계(이론)↔실습·실험 짝 5쌍
 - 진로 트랙 태그: 26년 전공 로드맵의 3개 트랙 (로드맵에 없는 `인공지능프로그래밍`은 `[]`)
 - `requiredCourseIds`: 교과과정표의 전공필수 7과목
+- 졸업 학점: [입학연도별 졸업학점 안내](https://www.kw.ac.kr/ko/life/bachelor_info12.jsp)의 2020~2023학년도 입학자 표, 컴퓨터정보공학부 행 (2026-11-17 확인)
+  - `minimumTotalCredits`: 133 (졸업이수학점)
+  - `minimumMajorCredits`: 60 (단일전공 기준 주전공 학점, 전필+전선 합계. 다전공 이수 시 54학점은 아직 반영하지 않음)
 
 **아직 확인하지 못한 것**
 
-- 총 이수 학점·전공 최소 학점·학기당 최대 학점 (`requirements`의 `null` 항목)
+- 전공선택 최소 학점(`minimumMajorElectiveCredits`): 공식 자료에 별도 기준이 없어 `null`
+- 학기당 최대 학점(`maximumTermCredits`): 학칙·수강신청 안내에서 학부 기본 상한을 확인하지 못해 `null`
 - 학정번호 (`courseCodes`)
 - 기초교양 과목(대학수학및연습 등)과 관련 선수 관계
 
