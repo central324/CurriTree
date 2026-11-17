@@ -8,6 +8,13 @@
  *   - href가 있으면 링크, 없으면 '준비 중'으로 표시됩니다.
  *   - 현재 주소와 href가 같으면 자동으로 선택 표시가 됩니다.
  */
+export const SIDEBAR_SLIDE_MS = 280; // styles.css의 --sidebar-duration과 같은 값
+
+// 사이드바를 닫은 뒤 hidden을 붙이기까지 기다릴 시간(ms). 동작 줄이기 설정이면 0.
+export function sidebarCloseDelay(reduceMotion) {
+  return reduceMotion ? 0 : SIDEBAR_SLIDE_MS;
+}
+
 export const MENU = [
   { label: '커리메이커', href: '/maker/' },
   { label: 'KLAS 이수내역', href: '/klas/' },
@@ -58,7 +65,6 @@ function renderLayout() {
 
   // 열기: hidden을 풀고 → 다음 그림에서 is-open을 붙여 미끄러져 들어오게 합니다.
   // 닫기: is-open을 떼서 미끄러져 나가게 한 뒤 → 움직임이 끝나면 hidden을 다시 붙입니다.
-  const SLIDE_MS = 280; // styles.css의 --sidebar-duration과 같은 값
   let isOpen = false;
   let hideTimer;
 
@@ -77,12 +83,16 @@ function renderLayout() {
     } else {
       sidebar.classList.remove('is-open');
       backdrop.classList.remove('is-open');
-      hideTimer = setTimeout(() => {
+      const hide = () => {
         if (!isOpen) {
           sidebar.hidden = true;
           backdrop.hidden = true;
         }
-      }, SLIDE_MS);
+      };
+      // "동작 줄이기"를 켜면 미끄러지는 움직임이 없으므로 기다리지 않고 바로 숨깁니다.
+      const delay = sidebarCloseDelay(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      if (delay === 0) hide();
+      else hideTimer = setTimeout(hide, delay);
       openButton.focus();
     }
   }
@@ -95,4 +105,5 @@ function renderLayout() {
   });
 }
 
-renderLayout();
+// 테스트(Node)에서 import할 때는 화면을 그리지 않습니다.
+if (typeof document !== 'undefined') renderLayout();
