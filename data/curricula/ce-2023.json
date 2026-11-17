@@ -25,7 +25,10 @@
       "id": "eng-design-intro",
       "name": "공학설계입문",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I000-1-2957",
+        "7000-1-2957"
+      ],
       "credits": 3,
       "category": "unknown",
       "recommendedTerm": "1",
@@ -46,7 +49,9 @@
       "id": "cs-intro-seminar",
       "name": "컴퓨터공학입문세미나",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-1-8101"
+      ],
       "credits": 2,
       "category": "major_elective",
       "recommendedTerm": "1-1",
@@ -66,7 +71,9 @@
       "id": "adv-c-programming",
       "name": "고급C프로그래밍",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-1-2339"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "1-2",
@@ -86,7 +93,9 @@
       "id": "digital-logic-1",
       "name": "디지털논리회로1",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-0453"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "2-1",
@@ -108,7 +117,9 @@
       "aliases": [
         "고급프로그래밍설계"
       ],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-8481"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "2-1",
@@ -134,7 +145,9 @@
       "id": "circuit-theory",
       "name": "회로이론",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-1994"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "2-1",
@@ -152,7 +165,9 @@
       "id": "ce-lab-1",
       "name": "컴퓨터공학기초실험1",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-8086"
+      ],
       "credits": 2,
       "category": "major_elective",
       "recommendedTerm": "2-1",
@@ -173,7 +188,9 @@
       "aliases": [
         "고급프로그래밍실습"
       ],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-8482"
+      ],
       "credits": 1,
       "category": "major_elective",
       "recommendedTerm": "2-1",
@@ -195,7 +212,9 @@
       "id": "digital-logic-2",
       "name": "디지털논리회로2",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-0454"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "2-2",
@@ -217,7 +236,9 @@
       "id": "data-structure-design",
       "name": "데이터구조설계",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-3703"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "2-2",
@@ -241,7 +262,9 @@
       "id": "ce-lab-2",
       "name": "컴퓨터공학기초실험2",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-8087"
+      ],
       "credits": 2,
       "category": "major_elective",
       "recommendedTerm": "2-2",
@@ -262,7 +285,9 @@
       "id": "assembly-design-lab",
       "name": "어셈블리프로그램설계및실습",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-4530"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "2-2",
@@ -279,8 +304,12 @@
     {
       "id": "electronic-circuits",
       "name": "전자회로",
-      "aliases": [],
-      "courseCodes": [],
+      "aliases": [
+        "디지털전자회로"
+      ],
+      "courseCodes": [
+        "I020-2-5465"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "2-2",
@@ -298,7 +327,9 @@
       "id": "oss-design-lab",
       "name": "오픈소스소프트웨어설계및실습",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-8992"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "2-2",
@@ -318,7 +349,9 @@
       "id": "data-structure-lab",
       "name": "데이터구조실습",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-2-3712"
+      ],
       "credits": 1,
       "category": "major_elective",
       "recommendedTerm": "2-2",
@@ -339,7 +372,9 @@
       "id": "computer-architecture",
       "name": "컴퓨터구조",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-1647"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "3-1",
@@ -363,7 +398,9 @@
       "id": "system-programming",
       "name": "시스템프로그래밍",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-0922"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "3-1",
@@ -388,7 +425,9 @@
       "id": "computer-architecture-lab",
       "name": "컴퓨터구조실험",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-3831"
+      ],
       "credits": 1,
       "category": "major_elective",
       "recommendedTerm": "3-1",
@@ -409,7 +448,9 @@
       "id": "system-programming-lab",
       "name": "시스템프로그래밍실습",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-3704"
+      ],
       "credits": 1,
       "category": "major_elective",
       "recommendedTerm": "3-1",
@@ -431,7 +472,9 @@
       "id": "signals-systems",
       "name": "신호및시스템",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-2004"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-1",
@@ -451,7 +494,9 @@
       "id": "computer-network",
       "name": "컴퓨터네트워크",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-1654"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-1",
@@ -489,7 +534,9 @@
       "id": "operating-systems",
       "name": "운영체제",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-1110"
+      ],
       "credits": 3,
       "category": "major_required",
       "recommendedTerm": "3-2",
@@ -556,7 +603,9 @@
       "id": "microprocessor",
       "name": "마이크로프로세서",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-0492"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-2",
@@ -576,7 +625,9 @@
       "id": "digital-signal-processing",
       "name": "디지털신호처리",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-0458"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-2",
@@ -598,7 +649,9 @@
       "aliases": [
         "데이터통신설계"
       ],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-4534"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-2",
@@ -618,7 +671,9 @@
       "id": "algorithms",
       "name": "알고리즘",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-0969"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-2",
@@ -638,7 +693,9 @@
       "id": "artificial-intelligence",
       "name": "인공지능",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-3-1196"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-2",
@@ -678,7 +735,9 @@
       "id": "gpu-computing",
       "name": "GPU컴퓨팅",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-9615"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "3-2",
@@ -698,7 +757,9 @@
       "id": "software-engineering",
       "name": "소프트웨어공학",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-0846"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-1",
@@ -719,9 +780,12 @@
       "id": "wireless-5g",
       "name": "무선이동네트워크및5G",
       "aliases": [
-        "무선이동네트워크"
+        "무선이동네트워크",
+        "무선모바일네트워크"
       ],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-5466"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-1",
@@ -739,7 +803,9 @@
       "id": "computer-vision",
       "name": "컴퓨터비젼",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-4136"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-1",
@@ -759,7 +825,9 @@
       "id": "embedded-system-sw",
       "name": "임베디드시스템S/W설계",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-5861"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-1",
@@ -779,7 +847,9 @@
       "id": "machine-learning",
       "name": "머신러닝",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-8483"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-1",
@@ -842,7 +912,9 @@
       "id": "ai-programming",
       "name": "인공지능프로그래밍",
       "aliases": [],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-4459"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-2",
@@ -884,9 +956,12 @@
       "name": "지능IoT특론",
       "aliases": [
         "IoT특론",
-        "차세대IT특론"
+        "차세대IT특론",
+        "지능IT특론"
       ],
-      "courseCodes": [],
+      "courseCodes": [
+        "I020-4-5469"
+      ],
       "credits": 3,
       "category": "major_elective",
       "recommendedTerm": "4-2",
