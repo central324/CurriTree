@@ -1,0 +1,28 @@
+# Git
+.git
+.github
+
+# Dependencies
+node_modules
+
+# Secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Development files
+tests
+docs
+coverage
+dist
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode
+.idea
