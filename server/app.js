@@ -5,6 +5,7 @@ import { loadCurriculumStore } from './curriculum/store.js';
 import { sendError } from './errors.js';
 import { registerValidateRoute } from './maker/validate-route.js';
 import { createAiMatchRouter } from './routes/ai.js';
+import { createAiRateLimiter } from './middleware/aiRateLimiter.js';
 
 const defaultCurriculumDir = fileURLToPath(new URL('../data/curricula/', import.meta.url));
 const publicDirectory = fileURLToPath(new URL('../public/', import.meta.url));
@@ -17,6 +18,12 @@ const sharedDirectory = fileURLToPath(new URL('../shared/', import.meta.url));
  */
 export function createApp({ curriculumDir = defaultCurriculumDir, logger = console } = {}) {
   const app = express();
+
+  // Render의 리버스 프록시를 고려한 초기 설정
+  if (process.env.RENDER === 'true') {
+    app.set('trust proxy', 1);
+  }
+
   const store = loadCurriculumStore(curriculumDir);
 
   if (store.errors.length > 0) {
@@ -122,6 +129,9 @@ export function createApp({ curriculumDir = defaultCurriculumDir, logger = conso
 
   // 커리메이커 이수요건 검증 API
   registerValidateRoute(app, store);
+
+  // Gemini API 호출 횟수 제한
+  app.post('/api/ai/match-courses', createAiRateLimiter());
 
   // Gemini를 이용한 KLAS 과목 매칭 API
   app.use('/api/ai', createAiMatchRouter({

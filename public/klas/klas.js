@@ -594,6 +594,13 @@ async function requestAiSuggestions() {
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error(
+          'AI 추천 요청 횟수를 초과했습니다. ' +
+          '잠시 후 다시 시도하거나 과목을 직접 선택해주세요.'
+        );
+      }
+
       if (response.status === 503) {
         throw new Error(
           'AI 서비스를 사용할 수 없습니다. 아래에서 과목을 직접 선택해주세요.'
