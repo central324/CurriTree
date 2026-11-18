@@ -14,12 +14,67 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
+
       - name: Install dependencies
         run: npm ci
+
       - name: Run tests
         run: npm test
+
+  docker-build:
+    name: Docker build and smoke test
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build Docker image
+        run: docker build -t curritree:ci .
+
+      - name: Start Docker container
+        run: |
+          docker run -d \
+            --name curritree-ci \
+            -p 127.0.0.1:3000:3000 \
+            curritree:ci
+
+      - name: Check application endpoints
+        run: |
+          ready=0
+
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /dev/null; then
+              ready=1
+              break
+            fi
+
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo "Docker container failed to start."
+            exit 1
+          fi
+
+          for route in / /klas/ /maker/ /roadmap/ /api/health; do
+            echo "Checking $route"
+            curl -fsS "http://127.0.0.1:3000$route" > /dev/null
+          done
+
+          echo "All Docker smoke tests passed."
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs curritree-ci
+
+      - name: Remove Docker container
+        if: always()
+        run: docker rm -f curritree-ci || true

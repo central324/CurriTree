@@ -848,7 +848,7 @@ LLM 기능은 실제 API 호출이 필요한 기능으로 구현하며, 호출 �
 
 CurriTree는 Docker 컨테이너에서 Express 서버와 프론트엔드를 함께 실행할 수 있습니다.
 
-현재 로컬 Docker 실행 환경이 구성되어 있으며, 공개 배포 및 CI 통합은 후속 작업에서 진행합니다. (Issue #26)
+현재 로컬 Docker 실행 환경과 GitHub Actions 기반 Docker 빌드·스모크 테스트가 구성되어 있으며, 공개 배포는 후속 작업에서 진행합니다. (Issue #26)
 
 #### Docker 이미지 빌드
 
@@ -894,9 +894,21 @@ docker run --rm --name curritree-local -p 3000:3000 --env-file .env curritree:lo
 
 컨테이너는 실행 중인 터미널에서 `Ctrl+C`로 종료할 수 있습니다. `--rm` 옵션을 사용하면 종료 시 컨테이너가 자동 삭제됩니다.
 
+#### CI 자동 검증
+
+GitHub Actions에서 PR 생성 및 `main` 브랜치 업데이트 시 다음 항목을 자동으로 검사합니다.
+
+- `npm test` 실행
+- Docker 이미지 빌드
+- Docker 컨테이너 실행
+- 주요 화면 및 Health API HTTP 응답 확인
+
+CI에서는 Gemini API 키를 사용하지 않습니다.
+실제 Gemini 연동 테스트는 API 키가 설정된 환경에서 별도로 진행합니다.
+
 #### 후속 작업
 
-- Docker 빌드 CI 구성
+- 공개 배포 플랫폼 선정
 - 배포 환경변수 및 비밀키 관리
 - 공개 HTTPS URL 배포
 - 배포 환경 통합 테스트
