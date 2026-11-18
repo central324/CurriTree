@@ -52,6 +52,25 @@ describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
     assert.deepEqual(linked['data-structure-design'], ['data-structure-lab']);
   });
 
+  test('2023학번 졸업 학점: 총 133학점, 전공 60학점 (확인 못 한 값은 null)', () => {
+    assert.equal(data.requirements.minimumTotalCredits, 133);
+    assert.equal(data.requirements.minimumMajorCredits, 60);
+    assert.equal(data.requirements.minimumMajorElectiveCredits, null);
+    assert.equal(data.requirements.maximumTermCredits, null);
+  });
+
+  test('학정번호는 분반을 뺀 형식이고 과목끼리 겹치지 않는다', () => {
+    const seen = new Map();
+    for (const course of data.courses) {
+      for (const code of course.courseCodes) {
+        assert.match(code, /^(?:[A-Z]\d{3}|\d{4})-\d-\d{4}$/, `${course.id}: ${code}`);
+        assert.ok(!seen.has(code), `${code}: ${seen.get(code)}, ${course.id}`);
+        seen.set(code, course.id);
+      }
+    }
+    assert.ok(seen.size > 0);
+  });
+
   test('전공필수 과목은 모두 requiredCourseIds에 있다', () => {
     const required = data.courses.filter((course) => course.category === 'major_required').map((course) => course.id);
     assert.deepEqual([...data.requirements.requiredCourseIds].sort(), required.sort());
