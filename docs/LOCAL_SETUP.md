@@ -1,62 +1,114 @@
-# 로컬 개발 환경 설정
+# CurriTree 개발 및 실행 환경
 
-이 문서는 CurriTree의 **초기 실행용 뼈대**를 다룹니다. 아직 실제 전공 로드맵·수강 계획·졸업요건 검증 기능은 구현되지 않았습니다.
+CurriTree는 광운대학교 컴퓨터정보공학부의 이수내역 관리,
+학기별 수강 계획 및 졸업요건 검증을 지원하는 웹 애플리케이션입니다.
 
-## 준비물
+## 1. 개발 환경
 
-- Node.js 22 이상 (npm 포함)
+- Node.js 22 이상
+- npm
 - Git
-- 코드 편집기 (VS Code 권장)
+- Docker (컨테이너 실행 시)
+- VS Code 권장
 
-## 처음 실행하기
+## 2. 로컬 개발 서버 실행
 
-프로젝트 루트(`package.json`이 있는 폴더)에서 실행합니다.
+프로젝트 루트에서 실행합니다.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-브라우저에서 다음 주소를 확인합니다.
+서버 주소: http://localhost:3000/
 
-- [http://localhost:3000](http://localhost:3000): 임시 시작 화면
-- [http://localhost:3000/api/health](http://localhost:3000/api/health): 서버 상태 JSON
+주요 화면:
 
-개발 서버를 종료하려면 터미널에서 `Ctrl+C`를 누릅니다.
+- `/` : 메인 화면
+- `/klas/` : KLAS 이수내역 입력
+- `/maker/` : 커리메이커
+- `/roadmap/` : 전공 로드맵
+- `/api/health` : 서버 상태 확인
 
-## 테스트
+## 3. Gemini 환경변수
+
+프로젝트 루트에 `.env` 파일을 준비합니다.
+
+```dotenv
+PORT=3000
+GEMINI_API_KEY=YOUR_API_KEY
+```
+
+기존 `.env` 파일이 있다면 그대로 사용합니다.
+
+`GEMINI_MODEL`은 필요한 경우 추가할 수 있습니다.
+
+실제 API 키가 포함된 `.env`는 Git에 커밋하지 않습니다.
+
+## 4. 자동 테스트
 
 ```bash
 npm test
 ```
 
-현재는 시작 화면과 `/api/health` 엔드포인트에 대한 스모크 테스트를 실행합니다. 새 기능을 구현하면 해당 담당자가 정상·오류·경계값 테스트를 추가합니다.
+KLAS 파싱, Gemini 매칭, 교육과정 검증,
+커리메이커 및 서버 API 관련 테스트를 실행합니다.
 
-## 명령어
+## 5. Docker 실행
 
-| 명령어 | 용도 |
-| --- | --- |
-| `npm ci` | `package-lock.json`에 기록된 의존성 설치 |
-| `npm run dev` | 파일 변경 감지 기능이 있는 개발 서버 실행 |
-| `npm start` | 일반 서버 실행 |
-| `npm test` | Node.js 내장 테스트 러너 실행 |
+이미지 빌드:
 
-## 환경변수
-
-`.env.example`에는 필요한 변수 이름만 기록합니다. API 키가 들어 있는 `.env`는 Git에 올리지 않습니다.
-
-현재 `PORT`를 설정하지 않으면 `3000`번 포트로 실행됩니다. 예를 들어 PowerShell에서 실행 전에 다음을 입력할 수 있습니다.
-
-```powershell
-$env:PORT = '3100'
-npm run dev
+```bash
+docker build -t curritree:local .
 ```
 
-추후 LLM 연동과 수강 계획 영속 저장 기능이 추가되면 필요한 환경변수와 데이터 보존 방법을 이 문서에 기록합니다.
+기본 실행:
 
-## 팀 협업 전 확인 사항
+```bash
+docker run --rm --name curritree-local -p 3000:3000 curritree:local
+```
 
-1. `docs/CONTRACT_CHECKLIST.md`를 검토하여 JSON 필드와 API 응답을 합의합니다.
-2. 기능별 Issue와 브랜치를 만들고 구현합니다.
-3. 테스트 완료 후 PR을 제출합니다.
-4. 작성자 외 팀원 1명 이상의 승인을 받고 `main`에 병합합니다.
+Gemini 환경변수 포함 실행:
+
+```bash
+docker run --rm --name curritree-local -p 3000:3000 --env-file .env curritree:local
+```
+
+컨테이너는 기본적으로 비루트 사용자 `node`로 실행됩니다.
+
+## 6. GitHub Actions CI
+
+PR 생성 또는 main 브랜치에 변경 사항이 반영되면:
+
+1. npm 의존성 설치
+2. 전체 자동 테스트 실행
+3. Docker 이미지 빌드
+4. 컨테이너 실행
+5. 주요 화면 및 Health API 스모크 테스트
+
+순서로 검증합니다.
+
+## 7. Render 공개 테스트 서버
+
+주소: https://curritree.onrender.com/
+
+배포는 main 브랜치를 기준으로 진행합니다.
+
+필수 환경변수는 Render 대시보드에서 관리합니다.
+
+- PORT
+- GEMINI_API_KEY
+- GEMINI_MODEL
+
+공개 서버에서 Gemini API 추천 기능을 사용하려면
+GEMINI_API_KEY가 정상 등록되어 있어야 합니다.
+
+Gemini API 요청에는 기본적인 IP별 호출 횟수 제한이 적용됩니다.
+
+## 8. 협업 및 보안
+
+- 기능별 브랜치에서 작업합니다.
+- PR 병합 전 팀원 1명 이상의 승인을 받습니다.
+- API 키와 실제 학생 개인정보를 커밋하지 않습니다.
+- 테스트에는 가상 KLAS 성적조회 데이터를 사용합니다.
+- AI 추천은 참고용이며 최종 과목 매칭은 사용자가 확정합니다.
