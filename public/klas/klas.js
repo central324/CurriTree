@@ -52,6 +52,7 @@ const STATUS_LABELS = {
 const WARNING_LABELS = {
   ROW_FORMAT_INVALID: '과목 행의 형식을 인식하지 못했습니다.',
   TERM_NOT_FOUND: '소속 학기를 확인하지 못했습니다.',
+  TERM_FORMAT_INVALID: '학기 제목 형식이 올바르지 않습니다. 해당 학기의 과목을 확인해주세요.',
   COURSE_INFORMATION_INCOMPLETE: '과목 정보가 불완전합니다.',
 };
 
