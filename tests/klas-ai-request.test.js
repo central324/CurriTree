@@ -160,3 +160,79 @@ test('Invalid AI response structures are rejected', async () => {
     /AI 응답 형식이 올바르지 않습니다.*직접 선택/
   );
 });
+
+test('Cancelled AI requests preserve AbortError', async () => {
+  const controller = new AbortController();
+
+  let receivedSignal = null;
+
+  const pendingRequest = requestAiMatches({
+    ...params,
+    signal: controller.signal,
+
+    fetchImpl: (_url, options) => {
+      receivedSignal = options.signal;
+
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener(
+          'abort',
+          () => reject(options.signal.reason),
+          { once: true }
+        );
+      });
+    },
+  });
+
+  assert.equal(receivedSignal, controller.signal);
+
+  // 진행 중인 요청을 취소합니다.
+  controller.abort();
+
+  await assert.rejects(
+    pendingRequest,
+    (error) => {
+      assert.equal(error.name, 'AbortError');
+      assert.doesNotMatch(
+        error.message,
+        /네트워크 상태를 확인/
+      );
+      return true;
+    }
+  );
+});
+
+test('Late responses from cancelled requests are ignored', async () => {
+  const controller = new AbortController();
+
+  let resolveFetch;
+
+  const delayedResponse = new Promise((resolve) => {
+    resolveFetch = resolve;
+  });
+
+  const pendingRequest = requestAiMatches({
+    ...params,
+    signal: controller.signal,
+
+    // 취소 신호를 무시하는 가상의 요청을 사용합니다.
+    fetchImpl: () => delayedResponse,
+  });
+
+  controller.abort();
+
+  // 취소된 이후 정상 응답이 도착하는 상황을 재현합니다.
+  resolveFetch(
+    makeResponse(200, {
+      schemaVersion: 1,
+      results: [],
+    })
+  );
+
+  await assert.rejects(
+    pendingRequest,
+    (error) => {
+      assert.equal(error.name, 'AbortError');
+      return true;
+    }
+  );
+});

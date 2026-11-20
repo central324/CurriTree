@@ -4,11 +4,15 @@ const FALLBACK_MESSAGE =
 export async function requestAiMatches({
   curriculumId,
   unmatchedCourses,
+  signal,
   fetchImpl = fetch,
 }) {
   let response;
 
   try {
+    // 이미 취소된 요청은 서버에 보내지 않습니다.
+    signal?.throwIfAborted();
+
     response = await fetchImpl('/api/ai/match-courses', {
       method: 'POST',
       headers: {
@@ -19,8 +23,17 @@ export async function requestAiMatches({
         curriculumId,
         unmatchedCourses,
       }),
+      signal,
     });
-  } catch {
+
+    // 요청 취소 후 도착한 응답은 처리하지 않습니다.
+    signal?.throwIfAborted();
+  } catch (error) {
+    // 사용자가 취소한 요청을 네트워크 오류로 표시하지 않습니다.
+    if (signal?.aborted || error?.name === 'AbortError') {
+      throw error;
+    }
+
     throw new Error(
       'AI 서버에 연결하지 못했습니다. ' +
       '네트워크 상태를 확인하거나 과목을 직접 선택해주세요.'
@@ -56,7 +69,14 @@ export async function requestAiMatches({
 
   try {
     data = await response.json();
-  } catch {
+
+    // JSON 처리 도중 취소된 요청도 결과를 반환하지 않습니다.
+    signal?.throwIfAborted();
+  } catch (error) {
+    if (signal?.aborted || error?.name === 'AbortError') {
+      throw error;
+    }
+
     throw new Error(
       'AI 응답을 읽지 못했습니다. ' +
       '다시 시도하거나 과목을 직접 선택해주세요.'
