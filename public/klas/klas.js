@@ -2,6 +2,7 @@ import { parseKlasText } from './parser.js';
 import { matchParsedCourses } from './matcher.js';
 import { buildMakerPlan } from './plan.js';
 import { saveMakerHandoff } from './handoff.js';
+import { requestAiMatches } from './ai-request.js';
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
@@ -580,44 +581,10 @@ async function requestAiSuggestions() {
   );
 
   try {
-    const response = await fetch('/api/ai/match-courses', {
-      method: 'POST',
-
-      headers: {
-        'Content-Type': 'application/json',
-      },
-
-      body: JSON.stringify({
-        schemaVersion: 1,
-        curriculumId: currentResult.curriculum.curriculumId,
-        unmatchedCourses,
-      }),
+    const data = await requestAiMatches({
+      curriculumId: currentResult.curriculum.curriculumId,
+      unmatchedCourses,
     });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error(
-          'AI 추천 요청 횟수를 초과했습니다. ' +
-          '잠시 후 다시 시도하거나 과목을 직접 선택해주세요.'
-        );
-      }
-
-      if (response.status === 503) {
-        throw new Error(
-          'AI 서비스를 사용할 수 없습니다. 아래에서 과목을 직접 선택해주세요.'
-        );
-      }
-
-      throw new Error(
-        'AI 추천 요청에 실패했습니다. 과목을 직접 선택할 수 있습니다.'
-      );
-    }
-
-    const data = await response.json();
-
-    if (data.schemaVersion !== 1 || !Array.isArray(data.results)) {
-      throw new Error('AI 응답 형식이 올바르지 않습니다.');
-    }
 
     if (
       currentVersion !== analysisVersion ||
