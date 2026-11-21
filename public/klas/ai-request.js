@@ -83,10 +83,30 @@ export async function requestAiMatches({
     );
   }
 
+  // 객체 및 배열 내부의 값이 올바른 형식인지 확인합니다.
+  const isObject = (value) =>
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value);
+
+  const isValidCandidate = (candidate) =>
+    isObject(candidate) &&
+    typeof candidate.courseId === 'string' &&
+    ['high', 'medium', 'low'].includes(candidate.confidence) &&
+    typeof candidate.reason === 'string';
+
+  const isValidResult = (result) =>
+    isObject(result) &&
+    typeof result.clientId === 'string' &&
+    ['suggested', 'unmatched'].includes(result.status) &&
+    Array.isArray(result.candidates) &&
+    result.candidates.every(isValidCandidate);
+
   if (
-    !data ||
+    !isObject(data) ||
     data.schemaVersion !== 1 ||
-    !Array.isArray(data.results)
+    !Array.isArray(data.results) ||
+    !data.results.every(isValidResult)
   ) {
     throw new Error(
       'AI 응답 형식이 올바르지 않습니다. ' +

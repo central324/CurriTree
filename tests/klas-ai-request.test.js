@@ -236,3 +236,52 @@ test('Late responses from cancelled requests are ignored', async () => {
     }
   );
 });
+
+test('Null AI result entries are rejected', async () => {
+  await assert.rejects(
+    requestAiMatches({
+      ...params,
+      fetchImpl: async () =>
+        makeResponse(200, {
+          schemaVersion: 1,
+          results: [null],
+        }),
+    }),
+    /AI 응답 형식이 올바르지 않습니다/
+  );
+});
+
+test('Null AI candidate entries are rejected', async () => {
+  await assert.rejects(
+    requestAiMatches({
+      ...params,
+      fetchImpl: async () =>
+        makeResponse(200, {
+          schemaVersion: 1,
+          results: [
+            {
+              clientId: 'local-001',
+              status: 'suggested',
+              candidates: [null],
+            },
+          ],
+        }),
+    }),
+    /AI 응답 형식이 올바르지 않습니다/
+  );
+});
+
+test('Empty AI result arrays remain valid', async () => {
+  const expected = {
+    schemaVersion: 1,
+    results: [],
+  };
+
+  const result = await requestAiMatches({
+    ...params,
+    fetchImpl: async () =>
+      makeResponse(200, expected),
+  });
+
+  assert.deepEqual(result, expected);
+});
