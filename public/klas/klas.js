@@ -2,6 +2,7 @@ import { parseKlasText } from './parser.js';
 import { matchParsedCourses } from './matcher.js';
 import { buildMakerPlan } from './plan.js';
 import { saveMakerHandoff } from './handoff.js';
+import { requestAiMatches } from './ai-request.js';
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
@@ -24,6 +25,7 @@ let analysisVersion = 0;
 let activeResult = null;
 let aiLoading = false;
 let aiFeedback = '';
+let aiRequestController = null;
 
 const aiSuggestions = new Map();
 
@@ -52,6 +54,7 @@ const STATUS_LABELS = {
 const WARNING_LABELS = {
   ROW_FORMAT_INVALID: '과목 행의 형식을 인식하지 못했습니다.',
   TERM_NOT_FOUND: '소속 학기를 확인하지 못했습니다.',
+  TERM_FORMAT_INVALID: '학기 제목 형식이 올바르지 않습니다. 해당 학기의 과목을 확인해주세요.',
   COURSE_INFORMATION_INCOMPLETE: '과목 정보가 불완전합니다.',
 };
 
@@ -98,7 +101,22 @@ function refreshAnalyzeButton() {
   analyzeButton.disabled = !(hasText && hasCurriculum && validTerm);
 }
 
+function cancelPendingAiRequest() {
+  if (!aiRequestController) {
+    return;
+  }
+
+  // 현재 진행 중인 AI 요청을 취소합니다.
+  aiRequestController.abort();
+  aiRequestController = null;
+
+  aiLoading = false;
+  aiFeedback = '';
+}
+
 function updateInputState() {
+  cancelPendingAiRequest();
+
   analysisVersion += 1;
 
   activeResult = null;
@@ -515,6 +533,9 @@ function confirmCourseMatch(clientRowId, courseId) {
     return;
   }
 
+  // 수동 확정 결과를 이전 AI 응답이 덮어쓰지 않도록 합니다.
+  cancelPendingAiRequest();
+
   activeResult.matched = {
     courses: activeResult.matched.courses.map((course) => {
       if (course.clientRowId !== clientRowId) {
@@ -569,6 +590,9 @@ async function requestAiSuggestions() {
   const currentVersion = analysisVersion;
   const currentResult = activeResult;
 
+  const controller = new AbortController();
+  aiRequestController = controller;
+
   aiLoading = true;
   aiFeedback = 'AI 추천을 요청하는 중입니다.';
 
@@ -579,46 +603,14 @@ async function requestAiSuggestions() {
   );
 
   try {
-    const response = await fetch('/api/ai/match-courses', {
-      method: 'POST',
-
-      headers: {
-        'Content-Type': 'application/json',
-      },
-
-      body: JSON.stringify({
-        schemaVersion: 1,
-        curriculumId: currentResult.curriculum.curriculumId,
-        unmatchedCourses,
-      }),
+    const data = await requestAiMatches({
+      curriculumId: currentResult.curriculum.curriculumId,
+      unmatchedCourses,
+      signal: controller.signal,
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error(
-          'AI 추천 요청 횟수를 초과했습니다. ' +
-          '잠시 후 다시 시도하거나 과목을 직접 선택해주세요.'
-        );
-      }
-
-      if (response.status === 503) {
-        throw new Error(
-          'AI 서비스를 사용할 수 없습니다. 아래에서 과목을 직접 선택해주세요.'
-        );
-      }
-
-      throw new Error(
-        'AI 추천 요청에 실패했습니다. 과목을 직접 선택할 수 있습니다.'
-      );
-    }
-
-    const data = await response.json();
-
-    if (data.schemaVersion !== 1 || !Array.isArray(data.results)) {
-      throw new Error('AI 응답 형식이 올바르지 않습니다.');
-    }
-
     if (
+      controller.signal.aborted ||
       currentVersion !== analysisVersion ||
       activeResult !== currentResult
     ) {
@@ -678,23 +670,30 @@ async function requestAiSuggestions() {
       '후보를 확인한 뒤 직접 확정해주세요.';
   } catch (error) {
     if (
+      !controller.signal.aborted &&
       currentVersion === analysisVersion &&
       activeResult === currentResult
     ) {
-      aiFeedback = error.message;
+      aiFeedback =
+        error instanceof Error
+          ? error.message
+          : 'AI 추천 요청에 실패했습니다. 과목을 직접 선택해주세요.';
     }
   } finally {
-    if (
-      currentVersion === analysisVersion &&
-      activeResult === currentResult
-    ) {
+    if (aiRequestController === controller) {
+      aiRequestController = null;
       aiLoading = false;
 
-      renderResults(
-        currentResult.parsed,
-        currentResult.matched,
-        currentResult.curriculum
-      );
+      if (
+        currentVersion === analysisVersion &&
+        activeResult === currentResult
+      ) {
+        renderResults(
+          currentResult.parsed,
+          currentResult.matched,
+          currentResult.curriculum
+        );
+      }
     }
   }
 }
@@ -1123,6 +1122,8 @@ function renderResults(parsed, matched, curriculum) {
 
 async function handleSubmit(event) {
   event.preventDefault();
+
+  cancelPendingAiRequest();
 
   const rawText = klasTextInput.value;
   const currentTermId = currentTermInput.value.trim();

@@ -1,4 +1,3 @@
-
 const CATEGORY_MAP = {
   전필: 'major_required',
   전선: 'major_elective',
@@ -112,10 +111,23 @@ export function parseKlasText(rawText, { currentTermId = null } = {}) {
       continue;
     }
 
+    const trimmedLine = line.trim();
+
+    if (/^\d{4}\s*학년도/.test(trimmedLine)) {
+      activeTermId = null;
+
+      warnings.push({
+        lineNumber,
+        reason: 'TERM_FORMAT_INVALID',
+      });
+
+      continue;
+    }
+
     if (
-      /^학정번호(?:\t|$)/.test(line) ||
-      line === '재수강이후' ||
-      line === '삭제여부'
+      /^학정번호(?:\s|$)/.test(trimmedLine) ||
+      trimmedLine === '재수강이후' ||
+      trimmedLine === '삭제여부'
     ) {
       continue;
     }
