@@ -145,6 +145,37 @@
   font-size: 13px;
 }
 
+/* 예시 데이터 입력 영역 */
+
+.klas__sample {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.klas__sample p {
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.klas__sample .button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .klas__sample {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .klas__sample .button {
+    width: 100%;
+  }
+}
+
 .klas__fields {
   display: grid;
   grid-template-columns: 1fr 1fr;

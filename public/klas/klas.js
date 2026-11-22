@@ -3,6 +3,10 @@ import { matchParsedCourses } from './matcher.js';
 import { buildMakerPlan } from './plan.js';
 import { saveMakerHandoff } from './handoff.js';
 import { requestAiMatches } from './ai-request.js';
+import {
+  SAMPLE_CURRENT_TERM,
+  SAMPLE_KLAS_TEXT,
+} from './sample-data.js';
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
@@ -12,6 +16,7 @@ const klasTextInput = document.getElementById('klas-text');
 const textCount = document.getElementById('text-count');
 const analyzeButton = document.getElementById('analyze-button');
 const clearButton = document.getElementById('clear-button');
+const sampleButton = document.getElementById('sample-button');
 const message = document.getElementById('klas-message');
 
 const preview = document.getElementById('klas-preview');
@@ -132,6 +137,35 @@ function updateInputState() {
   refreshAnalyzeButton();
   clearResults();
   setMessage('');
+}
+
+function fillSampleInput() {
+  const hasExistingText = klasTextInput.value.trim().length > 0;
+  const isAlreadySample = klasTextInput.value === SAMPLE_KLAS_TEXT;
+
+  // 기존 입력 내용이 있다면 덮어쓰기 전에 확인합니다.
+  if (hasExistingText && !isAlreadySample) {
+    const shouldReplace = window.confirm(
+      '현재 입력한 내용을 예시 데이터로 바꾸시겠습니까?'
+    );
+
+    if (!shouldReplace) {
+      return;
+    }
+  }
+
+  klasTextInput.value = SAMPLE_KLAS_TEXT;
+  currentTermInput.value = SAMPLE_CURRENT_TERM;
+
+  // 기존 분석 결과와 진행 중인 AI 요청을 초기화합니다.
+  updateInputState();
+
+  setMessage(
+    '가상 이수내역을 입력했습니다. ' +
+    '교육과정을 확인한 뒤 과목 분석 및 매칭을 눌러주세요.'
+  );
+
+  klasTextInput.focus();
 }
 
 async function loadCurricula() {
@@ -1260,6 +1294,7 @@ currentTermInput.addEventListener('input', updateInputState);
 curriculumSelect.addEventListener('change', updateInputState);
 
 clearButton.addEventListener('click', clearInput);
+sampleButton.addEventListener('click', fillSampleInput);
 
 setDefaultCurrentTerm();
 loadCurricula();
