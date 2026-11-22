@@ -80,6 +80,102 @@
   font-size: 13px;
 }
 
+/* KLAS 이수내역 복사 가이드 */
+
+.klas__guide {
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.klas__guide summary {
+  padding: var(--space-4);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.klas__guide summary::marker {
+  color: var(--color-accent);
+}
+
+.klas__guide summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.klas__guide[open] summary {
+  border-bottom: 1px solid var(--color-line-soft);
+}
+
+.klas__guide-content {
+  padding: var(--space-4);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-ink-muted);
+}
+
+.klas__guide-content ol {
+  margin: 0;
+  padding-left: var(--space-6);
+}
+
+.klas__guide-content li + li {
+  margin-top: var(--space-3);
+}
+
+.klas__guide-content strong {
+  color: var(--color-ink);
+}
+
+.klas__guide-content a {
+  color: var(--color-accent);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.klas__guide-note {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  font-size: 13px;
+}
+
+/* 예시 데이터 입력 영역 */
+
+.klas__sample {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.klas__sample p {
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.klas__sample .button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .klas__sample {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .klas__sample .button {
+    width: 100%;
+  }
+}
+
 .klas__fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -233,6 +329,49 @@
 
 .klas__warnings li + li {
   margin-top: var(--space-2);
+}
+
+/* 입력 오류 발생 위치로 이동하는 버튼 */
+
+.klas__warnings li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.klas__warnings li span {
+  flex: 1;
+  line-height: 1.7;
+}
+
+.klas__warning-jump {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.klas__warning-jump:hover {
+  background: var(--color-accent-soft);
+}
+
+.klas__warning-jump:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .klas__warnings li {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
 }
 
 /* 과목 매칭 결과 */
