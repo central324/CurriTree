@@ -7,6 +7,13 @@ import {
   SAMPLE_CURRENT_TERM,
   SAMPLE_KLAS_TEXT,
 } from './sample-data.js';
+import {
+  isValidCurrentTerm,
+  getKlasInputHint,
+  getKlasWarningGuidance,
+  getKlasLineSelection,
+} from './input-feedback.js';
+
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
@@ -22,7 +29,6 @@ const message = document.getElementById('klas-message');
 const preview = document.getElementById('klas-preview');
 const resultsContainer = document.getElementById('klas-results');
 
-const TERM_PATTERN = /^\d{4}-(1|2|S|W)$/;
 const curriculumDepartments = new Map();
 
 let analysisVersion = 0;
@@ -54,13 +60,6 @@ const STATUS_LABELS = {
   failed: '미이수',
   deleted: '성적 삭제',
   needs_review: '확인 필요',
-};
-
-const WARNING_LABELS = {
-  ROW_FORMAT_INVALID: '과목 행의 형식을 인식하지 못했습니다.',
-  TERM_NOT_FOUND: '소속 학기를 확인하지 못했습니다.',
-  TERM_FORMAT_INVALID: '학기 제목 형식이 올바르지 않습니다. 해당 학기의 과목을 확인해주세요.',
-  COURSE_INFORMATION_INCOMPLETE: '과목 정보가 불완전합니다.',
 };
 
 const REVIEW_LABELS = {
@@ -101,7 +100,7 @@ function clearResults() {
 function refreshAnalyzeButton() {
   const hasText = klasTextInput.value.trim().length > 0;
   const hasCurriculum = curriculumSelect.value !== '';
-  const validTerm = TERM_PATTERN.test(currentTermInput.value.trim());
+  const validTerm = isValidCurrentTerm(currentTermInput.value);
 
   analyzeButton.disabled = !(hasText && hasCurriculum && validTerm);
 }
@@ -137,6 +136,19 @@ function updateInputState() {
   refreshAnalyzeButton();
   clearResults();
   setMessage('');
+}
+
+function handleInputChange() {
+  updateInputState();
+
+  const hint = getKlasInputHint(
+    klasTextInput.value,
+    currentTermInput.value
+  );
+
+  if (hint) {
+    setMessage(hint, 'error');
+  }
 }
 
 function fillSampleInput() {
@@ -507,6 +519,28 @@ function createReviewList(reviewIssues, courses, curriculum) {
   return section;
 }
 
+function focusInputLine(lineNumber) {
+  const selection = getKlasLineSelection(
+    klasTextInput.value,
+    lineNumber
+  );
+
+  if (!selection) {
+    return;
+  }
+
+  // 오류가 발생한 줄을 선택하여 수정 위치를 안내합니다.
+  klasTextInput.focus();
+  klasTextInput.setSelectionRange(
+    selection.start,
+    selection.end
+  );
+
+  klasTextInput.scrollIntoView({
+    block: 'center',
+  });
+}
+
 function createWarnings(warnings) {
   const section = document.createElement('section');
   section.className = 'klas__warnings';
@@ -515,24 +549,35 @@ function createWarnings(warnings) {
     createTextElement(
       'h3',
       '',
-      `파싱 경고 (${warnings.length}건)`
+      `입력 내용 확인 필요 (${warnings.length}건)`
     )
   );
 
   const list = document.createElement('ul');
 
   for (const warning of warnings) {
-    const reason =
-      WARNING_LABELS[warning.reason] ??
-      '해당 줄의 내용을 확인해주세요.';
+    const item = document.createElement('li');
 
-    list.appendChild(
-      createTextElement(
-        'li',
-        '',
-        `${warning.lineNumber}번째 줄: ${reason}`
-      )
+    const reason = getKlasWarningGuidance(warning.reason);
+
+    const description = createTextElement(
+      'span',
+      '',
+      `${warning.lineNumber}번째 줄: ${reason}`
     );
+
+    const jumpButton = document.createElement('button');
+    jumpButton.type = 'button';
+    jumpButton.className = 'klas__warning-jump';
+    jumpButton.textContent = '해당 줄로 이동';
+
+    jumpButton.addEventListener('click', () => {
+      focusInputLine(warning.lineNumber);
+    });
+
+    item.appendChild(description);
+    item.appendChild(jumpButton);
+    list.appendChild(item);
   }
 
   section.appendChild(list);
@@ -1162,13 +1207,10 @@ async function handleSubmit(event) {
   const rawText = klasTextInput.value;
   const currentTermId = currentTermInput.value.trim();
 
-  if (!rawText.trim()) {
-    setMessage('KLAS 성적조회 텍스트를 입력해주세요.', 'error');
-    return;
-  }
+  const inputHint = getKlasInputHint(rawText, currentTermId);
 
-  if (!TERM_PATTERN.test(currentTermId)) {
-    setMessage('현재 학기 형식을 확인해주세요.', 'error');
+  if (inputHint) {
+    setMessage(inputHint, 'error');
     return;
   }
 
@@ -1200,10 +1242,27 @@ async function handleSubmit(event) {
   }
 
   if (parsed.courses.length === 0) {
-    setMessage(
-      '인식된 과목이 없습니다. 학기 제목과 과목 정보를 확인해주세요.',
-      'error'
-    );
+    // 인식한 과목이 없어도 경고 목록은 표시합니다.
+    if (parsed.warnings.length > 0) {
+      resultsContainer.replaceChildren(
+        createWarnings(parsed.warnings)
+      );
+
+      preview.hidden = false;
+
+      setMessage(
+        '인식된 과목이 없습니다. 아래 경고에서 문제가 있는 ' +
+        '줄을 확인한 후 다시 분석해주세요.',
+        'error'
+      );
+    } else {
+      setMessage(
+        '인식된 과목이 없습니다. 학기 제목과 과목 정보를 ' +
+        '함께 복사했는지 확인해주세요.',
+        'error'
+      );
+    }
+
     return;
   }
 
@@ -1289,8 +1348,8 @@ function clearInput() {
 
 form.addEventListener('submit', handleSubmit);
 
-klasTextInput.addEventListener('input', updateInputState);
-currentTermInput.addEventListener('input', updateInputState);
+klasTextInput.addEventListener('input', handleInputChange);
+currentTermInput.addEventListener('input', handleInputChange);
 curriculumSelect.addEventListener('change', updateInputState);
 
 clearButton.addEventListener('click', clearInput);

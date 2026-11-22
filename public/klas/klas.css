@@ -331,6 +331,49 @@
   margin-top: var(--space-2);
 }
 
+/* 입력 오류 발생 위치로 이동하는 버튼 */
+
+.klas__warnings li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.klas__warnings li span {
+  flex: 1;
+  line-height: 1.7;
+}
+
+.klas__warning-jump {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.klas__warning-jump:hover {
+  background: var(--color-accent-soft);
+}
+
+.klas__warning-jump:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .klas__warnings li {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
 /* 과목 매칭 결과 */
 
 .klas__match--exact {
