@@ -15,6 +15,7 @@ import {
 } from './input-feedback.js';
 import {
   getHandoffSafetyState,
+  confirmHandoffWithUser,
 } from './handoff-safety.js';
 
 
@@ -1139,6 +1140,15 @@ function createMakerPlanPanel() {
       copyButton.textContent = 'JSON 복사';
 
       copyButton.addEventListener('click', async () => {
+        const shouldProceed = confirmHandoffWithUser(
+          safety,
+          (confirmationMessage) => window.confirm(confirmationMessage)
+        );
+
+        if (!shouldProceed) {
+          return;
+        }
+
         try {
           await navigator.clipboard.writeText(jsonText);
 
@@ -1163,16 +1173,15 @@ function createMakerPlanPanel() {
       makerButton.textContent = '커리메이커에 반영하기';
 
       makerButton.addEventListener('click', () => {
-        if (plan.reviewPendingCount > 0) {
-          const confirmed = window.confirm(
-            '아직 확인이 필요한 과목이 있습니다.\n' +
-            '미확정 과목은 학점 계산에 포함되지 않습니다.\n\n' +
-            '현재 확정된 과목만 커리메이커로 전달할까요?'
-          );
+        // 파싱 경고와 미확정 기록을 한 번의 확인 창에서 안내합니다.
+        const shouldProceed = confirmHandoffWithUser(
+          safety,
+          (confirmationMessage) => window.confirm(confirmationMessage)
+        );
 
-          if (!confirmed) {
-            return;
-          }
+        // 취소한 경우 저장하거나 페이지를 이동하지 않습니다.
+        if (!shouldProceed) {
+          return;
         }
 
         try {
