@@ -13,6 +13,9 @@ import {
   getKlasWarningGuidance,
   getKlasLineSelection,
 } from './input-feedback.js';
+import {
+  getHandoffSafetyState,
+} from './handoff-safety.js';
 
 
 const form = document.getElementById('klas-form');
@@ -991,6 +994,12 @@ function createMakerPlanPanel() {
 
       const { plan, reviewPendingRowIds } = result;
 
+      // 파싱 경고와 수강 기록 확인 필요 항목을 분리하여 판단합니다.
+      const safety = getHandoffSafetyState({
+        warnings: activeResult.parsed.warnings,
+        reviewPendingCount: plan.reviewPendingCount,
+      });
+
       output.replaceChildren();
 
       const majorCredits = plan.completedCourses.reduce(
@@ -1010,7 +1019,6 @@ function createMakerPlanPanel() {
         `전공 취득 학점: ${majorCredits}학점`,
         `전공 외 취득 학점: ${otherCredits}학점`,
         `현재 수강 중: ${plan.inProgressCourses.length}과목`,
-        `확인 필요: ${plan.reviewPendingCount}건`,
       ];
 
       for (const item of summaryItems) {
@@ -1019,14 +1027,50 @@ function createMakerPlanPanel() {
         );
       }
 
+      // 수강 기록 확인 필요 건수
+      summary.appendChild(
+        createTextElement(
+          'span',
+          safety.hasReviewPending
+            ? 'klas__summary-item klas__summary-item--warning'
+            : 'klas__summary-item',
+          `수강 기록 확인 필요: ${safety.reviewPendingCount}건`
+        )
+      );
+
+      // 파싱 경고 건수
+      summary.appendChild(
+        createTextElement(
+          'span',
+          safety.hasParsingWarnings
+            ? 'klas__summary-item klas__summary-item--warning'
+            : 'klas__summary-item',
+          `파싱 경고: ${safety.parsingWarningCount}건`
+        )
+      );
+
       output.appendChild(summary);
 
-      if (plan.reviewPendingCount > 0) {
+      if (safety.hasParsingWarnings) {
         output.appendChild(
           createTextElement(
             'p',
             'klas__plan-warning',
-            '아직 확인이 필요한 수강 기록이 있습니다. 미확정 항목은 취득 학점에 포함되지 않았습니다.'
+            `파싱 경고 ${safety.parsingWarningCount}건이 남아 있습니다. ` +
+            '일부 입력이 분석에서 제외되었거나 추가 확인이 ' +
+            '필요할 수 있습니다. 위의 입력 내용 확인 필요 ' +
+            '목록을 확인해주세요. 정상 인식된 과목은 유지됩니다.'
+          )
+        );
+      }
+
+      if (safety.hasReviewPending) {
+        output.appendChild(
+          createTextElement(
+            'p',
+            'klas__plan-warning',
+            '아직 확인이 필요한 수강 기록이 있습니다. ' +
+            '미확정 항목은 취득 학점에 포함되지 않았습니다.'
           )
         );
 
@@ -1056,12 +1100,16 @@ function createMakerPlanPanel() {
         }
 
         output.appendChild(pendingList);
-      } else {
+      }
+
+      // 모든 경고가 해결된 경우에만 정상 완료 안내를 표시합니다.
+      if (safety.isFullyReviewed) {
         output.appendChild(
           createTextElement(
             'p',
             'klas__plan-success',
-            '미확정 항목 없이 데이터가 정리되었습니다.'
+            '파싱 경고와 미확정 수강 기록 없이 ' +
+            '데이터가 정리되었습니다.'
           )
         );
       }
