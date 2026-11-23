@@ -107,6 +107,22 @@
             </label>
 
             <label class="field">
+              <span>입학년도</span>
+
+              <input
+                id="admission-year"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]{4}"
+                maxlength="4"
+                placeholder="예: 2023"
+                title="입학년도를 2023과 같은 4자리 숫자로 입력하세요."
+                autocomplete="off"
+                required
+              />
+            </label>
+
+            <label class="field">
               <span>현재 학기</span>
 
               <input
@@ -119,6 +135,15 @@
               />
             </label>
           </div>
+
+          <p
+            id="admission-scope"
+            class="klas__admission-scope"
+            role="status"
+            aria-live="polite"
+          >
+            교육과정을 불러오면 적용 입학년도를 확인할 수 있습니다.
+          </p>
 
           <!-- 예시 데이터 체험-->
           <div class="klas__sample">

@@ -17,10 +17,14 @@ import {
   getHandoffSafetyState,
   confirmHandoffWithUser,
 } from './handoff-safety.js';
-
+import {
+  getAdmissionYearSupport,
+} from '/shared/curriculum/admission-year.js';
 
 const form = document.getElementById('klas-form');
 const curriculumSelect = document.getElementById('curriculum-id');
+const admissionYearInput = document.getElementById('admission-year');
+const admissionScope = document.getElementById('admission-scope');
 const currentTermInput = document.getElementById('current-term');
 const klasTextInput = document.getElementById('klas-text');
 
@@ -34,6 +38,9 @@ const preview = document.getElementById('klas-preview');
 const resultsContainer = document.getElementById('klas-results');
 
 const curriculumDepartments = new Map();
+
+// 교육과정별 학과 이름과 적용 입학년도를 관리합니다.
+const curriculumMetadata = new Map();
 
 let analysisVersion = 0;
 
@@ -101,12 +108,116 @@ function clearResults() {
   resultsContainer.replaceChildren();
 }
 
+/**
+ * 현재 선택한 교육과정과 사용자의 입학년도를 비교합니다.
+ * 데이터가 없거나 잘못된 경우에는 null을 반환합니다.
+ */
+function getSelectedAdmissionSupport() {
+  const info = curriculumMetadata.get(curriculumSelect.value);
+
+  if (!info) {
+    return null;
+  }
+
+  try {
+    return getAdmissionYearSupport({
+      admissionYear: admissionYearInput.value,
+      admissionYears: info.admissionYears,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * KLAS 입력 화면에 적용 학번 및 지원 여부를 표시합니다.
+ */
+function renderAdmissionScope() {
+  const info = curriculumMetadata.get(curriculumSelect.value);
+
+  admissionScope.className = 'klas__admission-scope';
+
+  if (!info) {
+    admissionScope.textContent =
+      '교육과정을 선택하면 적용 입학년도를 확인할 수 있습니다.';
+    return;
+  }
+
+  const support = getSelectedAdmissionSupport();
+
+  if (!support) {
+    admissionScope.textContent =
+      '교육과정의 적용 입학년도 정보를 확인할 수 없습니다. ' +
+      '교육과정 데이터를 확인해주세요.';
+
+    admissionScope.classList.add(
+      'klas__admission-scope--warning'
+    );
+    return;
+  }
+
+  const years = support.supportedYears
+    .map((year) => `${year}학번`)
+    .join(', ');
+
+  const prefix =
+    `${info.departmentName} · 적용 입학년도: ${years}`;
+
+  switch (support.status) {
+    case 'supported':
+      admissionScope.textContent =
+        `${prefix}. 입력한 ${support.admissionYear}학번은 ` +
+        '지원 대상입니다.';
+
+      admissionScope.classList.add(
+        'klas__admission-scope--supported'
+      );
+      break;
+
+    case 'unsupported':
+      admissionScope.textContent =
+        `${prefix}. 입력한 ${support.admissionYear}학번은 ` +
+        '지원되지 않습니다. 이 교육과정의 과목 매칭과 ' +
+        '이수요건을 본인의 공식 기준으로 사용할 수 없습니다.';
+
+      admissionScope.classList.add(
+        'klas__admission-scope--warning'
+      );
+      break;
+
+    case 'invalid':
+      admissionScope.textContent =
+        `${prefix}. 입학년도를 2023과 같은 ` +
+        '4자리 숫자로 입력해주세요.';
+
+      admissionScope.classList.add(
+        'klas__admission-scope--warning'
+      );
+      break;
+
+    default:
+      admissionScope.textContent =
+        `${prefix}. 분석을 시작하려면 본인의 ` +
+        '입학년도를 입력해주세요.';
+  }
+}
+
+
 function refreshAnalyzeButton() {
   const hasText = klasTextInput.value.trim().length > 0;
   const hasCurriculum = curriculumSelect.value !== '';
   const validTerm = isValidCurrentTerm(currentTermInput.value);
 
-  analyzeButton.disabled = !(hasText && hasCurriculum && validTerm);
+  const support = getSelectedAdmissionSupport();
+  const isSupported = support?.status === 'supported';
+
+  // 입학년도와 교육과정이 일치하는 경우에만 분석을 허용합니다.
+  analyzeButton.disabled = !(
+    hasText &&
+    hasCurriculum &&
+    validTerm &&
+    isSupported
+  );
 }
 
 function cancelPendingAiRequest() {
@@ -137,6 +248,7 @@ function updateInputState() {
 
   analyzeButton.textContent = '과목 분석 및 매칭';
 
+  renderAdmissionScope();
   refreshAnalyzeButton();
   clearResults();
   setMessage('');
@@ -203,6 +315,7 @@ async function loadCurricula() {
     );
 
     curriculumDepartments.clear();
+    curriculumMetadata.clear();
 
     let defaultCurriculumId = '';
 
@@ -220,6 +333,11 @@ async function loadCurricula() {
         curriculumSelect.add(new Option(label, curriculum.id));
 
         curriculumDepartments.set(curriculum.id, department.id);
+
+        curriculumMetadata.set(curriculum.id, {
+          departmentName: department.name ?? department.id,
+          admissionYears: curriculum.admissionYears,
+        });
       }
 
       if (
@@ -1221,6 +1339,20 @@ function renderResults(parsed, matched, curriculum) {
 
   resultsContainer.replaceChildren();
 
+  const appliedYears = curriculum.admissionYears
+    .map((year) => `${year}학번`)
+    .join(', ');
+
+  resultsContainer.appendChild(
+    createTextElement(
+      'p',
+      'klas__result-scope',
+      `${curriculum.department.name} · ${appliedYears} 교육과정을 ` +
+      '기준으로 분석했습니다. 실제 졸업요건은 학교의 공식 ' +
+      '학사 자료와 함께 확인해주세요.'
+    )
+  );
+
   resultsContainer.appendChild(
     createSummary(courses, reviewIssues, parsed.warnings)
   );
@@ -1273,6 +1405,17 @@ async function handleSubmit(event) {
 
   if (!curriculumSelect.value) {
     setMessage('교육과정을 선택해주세요.', 'error');
+    return;
+  }
+
+  const admissionSupport = getSelectedAdmissionSupport();
+
+  if (admissionSupport?.status !== 'supported') {
+    setMessage(
+      '입학년도와 교육과정의 지원 범위를 확인해주세요. ' +
+      '지원되지 않는 학번은 분석할 수 없습니다.',
+      'error'
+    );
     return;
   }
 
@@ -1336,6 +1479,21 @@ async function handleSubmit(event) {
     if (currentVersion !== analysisVersion) {
       return;
     }
+
+    // 실제 교육과정 상세 데이터의 적용 학번도 확인합니다.
+    const verifiedSupport = getAdmissionYearSupport({
+      admissionYear: admissionYearInput.value,
+      admissionYears: curriculum.admissionYears,
+    });
+
+    if (verifiedSupport.status !== 'supported') {
+      setMessage(
+        '선택한 입학년도는 해당 교육과정의 지원 대상이 아닙니다.',
+        'error'
+      );
+      return;
+    }
+
 
     // 교양 과목은 전공 교육과정 매칭에서 제외합니다.
     const majorRows = parsed.courses.filter(isMajorCourse);
@@ -1408,6 +1566,7 @@ form.addEventListener('submit', handleSubmit);
 klasTextInput.addEventListener('input', handleInputChange);
 currentTermInput.addEventListener('input', handleInputChange);
 curriculumSelect.addEventListener('change', updateInputState);
+admissionYearInput.addEventListener('input', updateInputState);
 
 clearButton.addEventListener('click', clearInput);
 sampleButton.addEventListener('click', fillSampleInput);

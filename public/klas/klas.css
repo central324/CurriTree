@@ -178,9 +178,38 @@
 
 .klas__fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* 적용 입학년도 및 교육과정 지원 범위 안내 */
+
+.klas__admission-scope,
+.klas__result-scope {
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.klas__admission-scope {
   margin-bottom: var(--space-6);
+}
+
+.klas__admission-scope--supported {
+  color: var(--color-ok);
+}
+
+.klas__admission-scope--warning {
+  color: var(--color-warn);
+}
+
+.klas__result-scope {
+  margin-bottom: var(--space-4);
 }
 
 .klas__text-field textarea {
