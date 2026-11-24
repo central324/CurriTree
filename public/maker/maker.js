@@ -1,4 +1,7 @@
-import { consumeMakerHandoff } from '../klas/handoff.js';
+import {
+  consumeMakerTransfer,
+  resolveTransferAdmissionYear,
+} from '../klas/admission-handoff.js';
 import {
   getAdmissionYearSupport,
 } from '/shared/curriculum/admission-year.js';
@@ -28,13 +31,18 @@ let currentCurriculum = null;
 let currentPlan = null;
 
 let pendingMakerPlan = null;
+let pendingAdmissionContext = null;
 
 try {
-  pendingMakerPlan = consumeMakerHandoff(
+  const transfer = consumeMakerTransfer(
     window.sessionStorage
   );
+
+  pendingMakerPlan = transfer.plan;
+  pendingAdmissionContext = transfer.admissionContext;
 } catch {
   pendingMakerPlan = null;
+  pendingAdmissionContext = null;
 }
 
 // 이수구분을 한국어로 표시
@@ -291,6 +299,30 @@ async function loadCurriculum() {
 
     currentCurriculum = curriculum;
     currentPlan = createBrowserPlan(curriculum.curriculumId);
+
+    // KLAS에서 전달된 계획의 교육과정과 현재 교육과정이
+    // 일치하는 경우에만 입학년도 자동 입력을 시도합니다.
+    if (
+      pendingMakerPlan &&
+      pendingMakerPlan.curriculumId === curriculum.curriculumId
+    ) {
+      const transferredYear = resolveTransferAdmissionYear(
+        pendingMakerPlan,
+        pendingAdmissionContext,
+        curriculum
+      );
+
+      // 한 번 검사한 전달 정보는 다시 사용하지 않습니다.
+      pendingAdmissionContext = null;
+
+      // 사용자가 이미 직접 입력했다면 그 값을 우선합니다.
+      if (
+        transferredYear !== null &&
+        admissionYearInput.value.trim() === ''
+      ) {
+        admissionYearInput.value = String(transferredYear);
+      }
+    }
     renderAdmissionScope();
 
     let importedValidation = null;
@@ -302,6 +334,8 @@ async function loadCurriculum() {
       isAdmissionSupported()
     ) {
       const importedPlan = pendingMakerPlan;
+      const importedAdmissionYear = admissionYearInput.value;
+      const importedCurriculum = currentCurriculum;
 
       try {
         const response = await fetch('/api/validate', {
@@ -324,6 +358,8 @@ async function loadCurriculum() {
         if (
           departmentSelect.value !== departmentId ||
           curriculumSelect.value !== curriculumId ||
+          currentCurriculum !== importedCurriculum ||
+          admissionYearInput.value !== importedAdmissionYear ||
           !isAdmissionSupported()
         ) {
           return;

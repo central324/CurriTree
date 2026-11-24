@@ -1,7 +1,9 @@
 import { parseKlasText } from './parser.js';
 import { matchParsedCourses } from './matcher.js';
 import { buildMakerPlan } from './plan.js';
-import { saveMakerHandoff } from './handoff.js';
+import {
+  saveMakerTransfer,
+} from './admission-handoff.js';
 import { requestAiMatches } from './ai-request.js';
 import {
   SAMPLE_CURRENT_TERM,
@@ -1291,24 +1293,29 @@ function createMakerPlanPanel() {
       makerButton.textContent = '커리메이커에 반영하기';
 
       makerButton.addEventListener('click', () => {
-        // 파싱 경고와 미확정 기록을 한 번의 확인 창에서 안내합니다.
+        // 기존 파싱 경고 및 미확정 기록 확인 절차 유지
         const shouldProceed = confirmHandoffWithUser(
           safety,
           (confirmationMessage) => window.confirm(confirmationMessage)
         );
 
-        // 취소한 경우 저장하거나 페이지를 이동하지 않습니다.
         if (!shouldProceed) {
           return;
         }
 
         try {
-          saveMakerHandoff(window.sessionStorage, plan);
+          // 수강 계획과 입학년도 정보를 별도로 안전하게 저장합니다.
+          saveMakerTransfer(window.sessionStorage, {
+            plan,
+            curriculum: activeResult.curriculum,
+            admissionYear: admissionYearInput.value,
+          });
 
           window.location.assign('/maker/');
         } catch {
           setMessage(
-            '커리메이커로 데이터를 전달하지 못했습니다. 다시 시도해주세요.',
+            '입학년도 또는 수강 계획을 전달하지 못했습니다. ' +
+            '교육과정과 입학년도를 다시 확인해주세요.',
             'error'
           );
         }
