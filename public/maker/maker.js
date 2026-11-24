@@ -1,7 +1,23 @@
 import { consumeMakerHandoff } from '../klas/handoff.js';
+import {
+  getAdmissionYearSupport,
+} from '/shared/curriculum/admission-year.js';
 const departmentSelect = document.getElementById("department-select");
 const curriculumSelect = document.getElementById("curriculum-select");
 const curriculumNotice = document.getElementById("curriculum-notice");
+const admissionYearInput = document.getElementById(
+  "maker-admission-year"
+);
+
+const admissionScope = document.getElementById(
+  "maker-admission-scope"
+);
+
+// 교육과정 선택 영역을 제외한 화면은
+// 지원 학번을 확인한 뒤 사용할 수 있습니다.
+const guardedSections = [
+  ...document.querySelectorAll(".maker-page > section"),
+].slice(1);
 const majorCreditBasis = document.getElementById("major-credit-basis");
 const courseSearch = document.getElementById("course-search");
 const courseSelect = document.getElementById("course-select");
@@ -42,6 +58,115 @@ async function fetchJSON(url) {
   }
 
   return response.json();
+}
+
+/**
+ * 현재 교육과정에 대한 입학년도 지원 여부를 판단합니다.
+ */
+function getCurrentAdmissionSupport() {
+  if (!currentCurriculum) {
+    return null;
+  }
+
+  try {
+    return getAdmissionYearSupport({
+      admissionYear: admissionYearInput.value,
+      admissionYears: currentCurriculum.admissionYears,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 지원되는 입학년도인지 확인합니다.
+ */
+function isAdmissionSupported() {
+  return getCurrentAdmissionSupport()?.status === "supported";
+}
+
+/**
+ * 적용 입학년도 안내 및 커리메이커 사용 상태를 갱신합니다.
+ */
+function renderAdmissionScope() {
+  const curriculum = currentCurriculum;
+  const support = getCurrentAdmissionSupport();
+  const supported = support?.status === "supported";
+
+  admissionScope.className = "maker-admission-scope";
+
+  // 지원되지 않는 학번에서는 계획 편집 및 검증 UI를 잠급니다.
+  for (const section of guardedSections) {
+    section.inert = !supported;
+    section.classList.toggle(
+      "maker-scope-locked",
+      !supported
+    );
+  }
+
+  validateButton.disabled = !supported || !currentPlan;
+
+  if (!curriculum) {
+    admissionScope.textContent =
+      "교육과정을 불러온 뒤 입학년도를 확인해주세요.";
+    return;
+  }
+
+  if (!support) {
+    admissionScope.textContent =
+      "교육과정의 적용 입학년도 정보가 올바르지 않습니다.";
+
+    admissionScope.classList.add(
+      "maker-admission-scope--warning"
+    );
+    return;
+  }
+
+  const years = support.supportedYears
+    .map((year) => `${year}학번`)
+    .join(", ");
+
+  const prefix =
+    `${curriculum.department.name} · ` +
+    `${curriculum.catalogYear} 교육과정 · ` +
+    `적용 입학년도: ${years}`;
+
+  switch (support.status) {
+    case "supported":
+      admissionScope.textContent =
+        `${prefix}. 입력한 ${support.admissionYear}학번은 ` +
+        "지원 대상입니다. 이수요건을 검증할 수 있습니다.";
+
+      admissionScope.classList.add(
+        "maker-admission-scope--supported"
+      );
+      break;
+
+    case "unsupported":
+      admissionScope.textContent =
+        `${prefix}. 입력한 ${support.admissionYear}학번은 ` +
+        "지원되지 않습니다. 이 교육과정의 졸업요건을 " +
+        "본인의 공식 기준으로 사용할 수 없습니다.";
+
+      admissionScope.classList.add(
+        "maker-admission-scope--warning"
+      );
+      break;
+
+    case "invalid":
+      admissionScope.textContent =
+        `${prefix}. 입학년도를 4자리 숫자로 입력해주세요.`;
+
+      admissionScope.classList.add(
+        "maker-admission-scope--warning"
+      );
+      break;
+
+    default:
+      admissionScope.textContent =
+        `${prefix}. 이수요건 검증을 사용하려면 ` +
+        "본인의 입학년도를 입력해주세요.";
+  }
 }
 
 // 1. 학과 목록 불러오기
@@ -136,6 +261,9 @@ async function loadCurriculum() {
 
   currentCurriculum = null;
   currentPlan = null;
+  renderAdmissionScope();
+  validationResult.textContent =
+    "교육과정과 입학년도를 확인해주세요.";
   renderMajorCreditBasis(null);
   resetOtherCreditInputs();
   renderPlan();
@@ -163,17 +291,17 @@ async function loadCurriculum() {
 
     currentCurriculum = curriculum;
     currentPlan = createBrowserPlan(curriculum.curriculumId);
+    renderAdmissionScope();
 
     let importedValidation = null;
     let importError = null;
 
     if (
       pendingMakerPlan &&
-      pendingMakerPlan.curriculumId === curriculum.curriculumId
+      pendingMakerPlan.curriculumId === curriculum.curriculumId &&
+      isAdmissionSupported()
     ) {
       const importedPlan = pendingMakerPlan;
-
-      pendingMakerPlan = null;
 
       try {
         const response = await fetch('/api/validate', {
@@ -195,11 +323,13 @@ async function loadCurriculum() {
 
         if (
           departmentSelect.value !== departmentId ||
-          curriculumSelect.value !== curriculumId
+          curriculumSelect.value !== curriculumId ||
+          !isAdmissionSupported()
         ) {
           return;
         }
 
+        pendingMakerPlan = null;
         currentPlan = importedPlan;
         importedValidation = result;
 
@@ -213,6 +343,7 @@ async function loadCurriculum() {
           );
         }
       } catch (error) {
+        pendingMakerPlan = null;
         importError = error.message;
       }
     }
@@ -229,7 +360,9 @@ async function loadCurriculum() {
       importedValidation?.summary ?? null
     );
 
-    validationResult.replaceChildren();
+    validationResult.textContent = isAdmissionSupported()
+      ? "아직 이수요건 검증을 실행하지 않았습니다."
+      : "입학년도 확인 후 이수요건 검증을 사용할 수 있습니다.";
 
     if (importedValidation) {
       renderValidationResult(importedValidation);
@@ -317,6 +450,23 @@ courseSearch.addEventListener("input", renderCourseOptions);
 
 // 페이지 실행 시 학과 목록 불러오기
 loadDepartments();
+
+admissionYearInput.addEventListener("input", () => {
+  // 입학년도 변경 시 기존 검증 결과는 더 이상 유효하지 않습니다.
+  renderAdmissionScope();
+
+  validationResult.textContent =
+    "입학년도가 변경되었습니다. 적용 기준을 확인한 뒤 " +
+    "이수요건을 다시 검사해주세요.";
+
+  renderCreditSummary(null);
+
+  // KLAS에서 전달된 계획이 대기 중이라면
+  // 지원 학번 확인 후 기존 불러오기 흐름을 재개합니다.
+  if (pendingMakerPlan && isAdmissionSupported()) {
+    void loadCurriculum();
+  }
+});
 
 const courseForm = document.getElementById("course-form");
 const statusSelect = document.getElementById("course-status");
@@ -601,6 +751,11 @@ function renderPlan() {
 
 // 서버가 계산한 학점 결과 표시
 function renderCreditSummary(summary) {
+  // 미지원 상태에서는 검증 API의 학점 결과를 표시하지 않습니다.
+  if (!isAdmissionSupported()) {
+    summary = null;
+  }
+
   const fields = {
     "earned-credits": summary?.earnedTotalCredits ?? 0,
     "in-progress-credits": summary?.inProgressCredits ?? 0,
@@ -1027,6 +1182,12 @@ const STATUS_NAMES = {
 
 // 검증 결과를 화면에 표시
 function renderValidationResult(result) {
+  if (!isAdmissionSupported()) {
+    validationResult.textContent =
+      "현재 입학년도는 해당 교육과정의 지원 범위에 " +
+      "포함되지 않습니다. 이수요건 검증 결과를 표시하지 않습니다.";
+    return;
+  }
   validationResult.replaceChildren();
 
   // 전체 검증 결과
@@ -1131,6 +1292,11 @@ function renderValidationResult(result) {
 
 // 이수요건 검사 버튼 클릭
 validateButton.addEventListener("click", async () => {
+  if (!isAdmissionSupported()) {
+    validationResult.textContent =
+      "입학년도와 교육과정의 지원 범위를 먼저 확인해주세요.";
+    return;
+  }
   if (!currentPlan || !currentCurriculum) {
     validationResult.textContent =
       "교육과정을 먼저 선택해 주세요.";
@@ -1140,6 +1306,7 @@ validateButton.addEventListener("click", async () => {
   // 검사 요청 시점의 수강 계획 기억
   const submittedPlan = currentPlan;
   const submittedCurriculum = currentCurriculum;
+  const submittedAdmissionYear = admissionYearInput.value;
 
   validateButton.disabled = true;
   validationResult.textContent = "이수요건 검사 중...";
@@ -1165,9 +1332,12 @@ validateButton.addEventListener("click", async () => {
     // 검증 도중 수강 계획이 바뀌었다면 이전 결과 무시
     if (
       currentPlan !== submittedPlan ||
-      currentCurriculum !== submittedCurriculum
+      currentCurriculum !== submittedCurriculum ||
+      admissionYearInput.value !== submittedAdmissionYear ||
+      !isAdmissionSupported()
     ) {
-      return;
+      validationResult.textContent =
+        `검증 오류: ${error.message}`;
     }
 
     // 검증 결과와 학점 현황 표시
@@ -1183,7 +1353,9 @@ validateButton.addEventListener("click", async () => {
         `검증 오류: ${error.message}`;
     }
   } finally {
-    validateButton.disabled = false;
+    validateButton.disabled =
+      !currentPlan || !isAdmissionSupported();
+
   }
 });
 
@@ -1257,3 +1429,6 @@ async function removeRecordedCourse(status, courseId) {
 
   showFeedback(`${courseName} 과목이 삭제되었습니다.`);
 }
+
+// 페이지 초기 진입 시 입학년도 확인 전 기능 사용을 제한합니다.
+renderAdmissionScope();
