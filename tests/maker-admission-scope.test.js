@@ -102,3 +102,31 @@ test('검증 요청 중 입학년도가 바뀌면 이전 결과를 무시한다'
     /validateButton\.disabled =\s*!currentPlan \|\| !isAdmissionSupported\(\)/
   );
 });
+
+test('변경된 입학년도에는 이전 검증 결과를 적용하지 않는다', () => {
+  const start = script.indexOf(
+    'validateButton.addEventListener("click", async () => {'
+  );
+
+  const end = script.indexOf(
+    'async function removeRecordedCourse(',
+    start
+  );
+
+  assert.ok(start >= 0);
+  assert.ok(end > start);
+
+  const handler = script.slice(start, end);
+
+  // 응답을 받은 뒤 입학년도 변경 여부를 확인합니다.
+  assert.match(
+    handler,
+    /admissionYearInput\.value !== submittedAdmissionYear/
+  );
+
+  // 기존 결과를 무시하고 즉시 종료해야 합니다.
+  assert.match(
+    handler,
+    /!isAdmissionSupported\(\)\s*\)\s*\{\s*return;\s*\}/
+  );
+});

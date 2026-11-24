@@ -1336,8 +1336,7 @@ validateButton.addEventListener("click", async () => {
       admissionYearInput.value !== submittedAdmissionYear ||
       !isAdmissionSupported()
     ) {
-      validationResult.textContent =
-        `검증 오류: ${error.message}`;
+      return;
     }
 
     // 검증 결과와 학점 현황 표시
@@ -1347,7 +1346,9 @@ validateButton.addEventListener("click", async () => {
   } catch (error) {
     if (
       currentPlan === submittedPlan &&
-      currentCurriculum === submittedCurriculum
+      currentCurriculum === submittedCurriculum &&
+      admissionYearInput.value === submittedAdmissionYear &&
+      isAdmissionSupported()
     ) {
       validationResult.textContent =
         `검증 오류: ${error.message}`;
