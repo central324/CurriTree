@@ -62,8 +62,6 @@ export function saveMakerTransfer(
       // 저장소 접근이 실패한 경우 원래 오류를 유지합니다.
     }
 
-    consumeMakerHandoff(storage);
-
     throw error;
   }
 }

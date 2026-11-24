@@ -304,3 +304,52 @@ test('KLAS와 커리메이커가 새로운 전달 모듈을 사용한다', () =>
     /resolveTransferAdmissionYear\(/
   );
 });
+
+test('저장 실패 시 기존 임시 수강 계획을 삭제하지 않는다', () => {
+  const underlying = createStorage();
+
+  // 기존에 전달 대기 중이던 수강 계획
+  const previousPlan = createPlan();
+  previousPlan.reviewPendingCount = 2;
+
+  underlying.setItem(
+    PLAN_KEY,
+    JSON.stringify(previousPlan)
+  );
+
+  // 새로운 계획 저장만 실패하도록 설정
+  const failingStorage = {
+    getItem(key) {
+      return underlying.getItem(key);
+    },
+
+    setItem(key, value) {
+      if (key === PLAN_KEY) {
+        throw new Error('저장소 쓰기 실패');
+      }
+
+      underlying.setItem(key, value);
+    },
+
+    removeItem(key) {
+      underlying.removeItem(key);
+    },
+  };
+
+  assert.throws(
+    () => save(failingStorage),
+    /저장소 쓰기 실패/
+  );
+
+  // 이전 계획은 그대로 남아 있어야 합니다.
+  assert.deepEqual(
+    JSON.parse(underlying.getItem(PLAN_KEY)),
+    previousPlan
+  );
+
+  // 실패한 신규 입학년도 정보는 남기지 않습니다.
+  assert.equal(
+    underlying.getItem(ADMISSION_KEY),
+    null
+  );
+});
