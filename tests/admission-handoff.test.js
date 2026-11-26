@@ -363,7 +363,16 @@ test('새 전달 실패 시 기존 계획과 입학년도 정보를 모두 유�
   const previousAdmission = JSON.stringify({
     curriculumId: curriculum.curriculumId,
     admissionYear: 2023,
-  });
+  }, null, 2);
+
+  // 기존 데이터와 새로 저장될 데이터가 구분되는지 확인합니다.
+  assert.notEqual(
+    previousAdmission,
+    JSON.stringify({
+      curriculumId: curriculum.curriculumId,
+      admissionYear: 2023,
+    })
+  );
 
   underlying.setItem(
     PLAN_KEY,
