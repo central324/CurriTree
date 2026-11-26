@@ -354,6 +354,7 @@ async function loadCurriculum() {
 
     let importedValidation = null;
     let importError = null;
+    let importSkippedBecauseEdited = false;
 
     if (
       pendingMakerPlan &&
@@ -363,6 +364,9 @@ async function loadCurriculum() {
       const importedPlan = pendingMakerPlan;
       const importedAdmissionYear = admissionYearInput.value;
       const importedCurriculum = currentCurriculum;
+
+      // KLAS 전달 검증을 시작할 당시의 수강 계획을 보관합니다.
+      const planAtImportStart = currentPlan;
 
       try {
         const response = await fetch('/api/validate', {
@@ -375,13 +379,7 @@ async function loadCurriculum() {
 
         const result = await response.json();
 
-        if (!response.ok) {
-          throw new Error(
-            result.error?.message ??
-            '전달된 수강 계획을 검증하지 못했습니다.'
-          );
-        }
-
+        // 교육과정이나 입학년도가 변경된 요청은 무시합니다.
         if (
           loadVersion !== makerScopeVersion ||
           departmentSelect.value !== departmentId ||
@@ -393,18 +391,32 @@ async function loadCurriculum() {
           return;
         }
 
-        pendingMakerPlan = null;
-        currentPlan = importedPlan;
-        importedValidation = result;
+        // 검증 대기 중 사용자가 계획을 수정했다면
+        // KLAS 전달 데이터로 덮어쓰지 않습니다.
+        if (currentPlan !== planAtImportStart) {
+          pendingMakerPlan = null;
+          importSkippedBecauseEdited = true;
+        } else {
+          if (!response.ok) {
+            throw new Error(
+              result.error?.message ??
+              '전달된 수강 계획을 검증하지 못했습니다.'
+            );
+          }
 
-        for (const [category, inputId] of Object.entries(
-          OTHER_CREDIT_FIELDS
-        )) {
-          const input = document.getElementById(inputId);
+          pendingMakerPlan = null;
+          currentPlan = importedPlan;
+          importedValidation = result;
 
-          input.value = String(
-            importedPlan.otherEarnedCredits[category]
-          );
+          for (const [category, inputId] of Object.entries(
+            OTHER_CREDIT_FIELDS
+          )) {
+            const input = document.getElementById(inputId);
+
+            input.value = String(
+              importedPlan.otherEarnedCredits[category]
+            );
+          }
         }
       } catch (error) {
         if (loadVersion !== makerScopeVersion) {
@@ -412,7 +424,12 @@ async function loadCurriculum() {
         }
 
         pendingMakerPlan = null;
-        importError = error.message;
+
+        if (currentPlan !== planAtImportStart) {
+          importSkippedBecauseEdited = true;
+        } else {
+          importError = error.message;
+        }
       }
     }
 
@@ -420,9 +437,20 @@ async function loadCurriculum() {
       ? "개발용 예시 교육과정입니다. 실제 졸업요건과 다를 수 있습니다."
       : `${curriculum.department.name} 교육과정을 불러왔습니다.`;
 
+
     renderMajorCreditBasis(curriculum.requirements);
     renderCourseOptions();
     renderPlan();
+
+    // 사용자가 직접 수정한 계획과 그 검증 결과를 보존합니다.
+    if (importSkippedBecauseEdited) {
+      showFeedback(
+        'KLAS 이수내역을 가져오는 동안 수강 계획이 수정되어 ' +
+        '가져오기를 취소했습니다. 현재 수정한 계획은 유지됩니다.',
+        true
+      );
+      return;
+    }
 
     renderCreditSummary(
       importedValidation?.summary ?? null

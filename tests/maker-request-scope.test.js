@@ -205,3 +205,51 @@ test('커리메이커의 주요 비동기 작업에 공통 검사가 연결되�
     /makerScopeVersion \+= 1/
   );
 });
+
+test('KLAS 전달 검증 중 수정된 수강 계획을 덮어쓰지 않는다', () => {
+  const source = readFileSync(
+    new URL('../public/maker/maker.js', import.meta.url),
+    'utf8'
+  );
+
+  const start = source.indexOf(
+    'let importedValidation = null;'
+  );
+
+  const end = source.indexOf(
+    'renderCreditSummary(',
+    start
+  );
+
+  assert.ok(start >= 0);
+  assert.ok(end > start);
+
+  const handler = source.slice(start, end);
+
+  assert.match(
+    handler,
+    /const planAtImportStart = currentPlan/
+  );
+
+  assert.match(
+    handler,
+    /if \(currentPlan !== planAtImportStart\)/
+  );
+
+  const guardIndex = handler.indexOf(
+    'if (currentPlan !== planAtImportStart)'
+  );
+
+  const applyIndex = handler.indexOf(
+    'currentPlan = importedPlan;'
+  );
+
+  assert.ok(guardIndex >= 0);
+  assert.ok(applyIndex > guardIndex);
+
+  // 사용자 편집을 감지하면 기존 학점 결과도 초기화하지 않습니다.
+  assert.match(
+    handler,
+    /if \(importSkippedBecauseEdited\)\s*\{[\s\S]*?return;/
+  );
+});

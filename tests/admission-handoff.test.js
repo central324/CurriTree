@@ -353,3 +353,59 @@ test('저장 실패 시 기존 임시 수강 계획을 삭제하지 않는다', 
     null
   );
 });
+
+test('새 전달 실패 시 기존 계획과 입학년도 정보를 모두 유지한다', () => {
+  const underlying = createStorage();
+
+  const previousPlan = createPlan();
+  previousPlan.reviewPendingCount = 2;
+
+  const previousAdmission = JSON.stringify({
+    curriculumId: curriculum.curriculumId,
+    admissionYear: 2023,
+  });
+
+  underlying.setItem(
+    PLAN_KEY,
+    JSON.stringify(previousPlan)
+  );
+
+  underlying.setItem(
+    ADMISSION_KEY,
+    previousAdmission
+  );
+
+  // 새로운 수강 계획 저장만 실패하는 상황을 재현합니다.
+  const failingStorage = {
+    getItem(key) {
+      return underlying.getItem(key);
+    },
+
+    setItem(key, value) {
+      if (key === PLAN_KEY) {
+        throw new Error('저장소 쓰기 실패');
+      }
+
+      underlying.setItem(key, value);
+    },
+
+    removeItem(key) {
+      underlying.removeItem(key);
+    },
+  };
+
+  assert.throws(
+    () => save(failingStorage),
+    /저장소 쓰기 실패/
+  );
+
+  assert.deepEqual(
+    JSON.parse(underlying.getItem(PLAN_KEY)),
+    previousPlan
+  );
+
+  assert.equal(
+    underlying.getItem(ADMISSION_KEY),
+    previousAdmission
+  );
+});

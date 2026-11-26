@@ -45,21 +45,34 @@ export function saveMakerTransfer(
     admissionYear: support.admissionYear,
   };
 
+  let previousAdmissionValue;
   try {
-    // 입학년도 정보를 먼저 저장합니다.
+    // 이전에 전달 대기 중이던 입학년도 정보를 보관합니다.
+    previousAdmissionValue = storage.getItem(
+      ADMISSION_CONTEXT_KEY
+    );
+
     storage.setItem(
       ADMISSION_CONTEXT_KEY,
       JSON.stringify(context)
     );
 
-    // 기존 수강 계획 전달 함수를 그대로 사용합니다.
     saveMakerHandoff(storage, safePlan);
   } catch (error) {
-    // 저장 도중 오류가 발생하면 부분 전달 데이터를 정리합니다.
-    try {
-      storage.removeItem(ADMISSION_CONTEXT_KEY);
-    } catch {
-      // 저장소 접근이 실패한 경우 원래 오류를 유지합니다.
+    // 새 계획 저장에 실패하면 이전 입학년도 정보를 복원합니다.
+    if (previousAdmissionValue !== undefined) {
+      try {
+        if (previousAdmissionValue === null) {
+          storage.removeItem(ADMISSION_CONTEXT_KEY);
+        } else {
+          storage.setItem(
+            ADMISSION_CONTEXT_KEY,
+            previousAdmissionValue
+          );
+        }
+      } catch {
+        // 복구에도 실패했다면 원래 저장 오류를 유지합니다.
+      }
     }
 
     throw error;
