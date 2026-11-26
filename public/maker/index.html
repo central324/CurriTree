@@ -51,9 +51,32 @@
               <option value="">교육과정 선택</option>
             </select>
           </label>
+
+          <label class="field">
+            입학년도
+            <input
+              id="maker-admission-year"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]{4}"
+              maxlength="4"
+              placeholder="예: 2023"
+              title="입학년도를 4자리 숫자로 입력해주세요."
+              autocomplete="off"
+              required
+            />
+          </label>
         </div>
 
         <p id="curriculum-notice" class="maker-notice"></p>
+        <p
+          id="maker-admission-scope"
+          class="maker-admission-scope"
+          role="status"
+          aria-live="polite"
+        >
+          입학년도를 입력하면 교육과정 지원 여부를 확인할 수 있습니다.
+        </p>
       </section>
 
       <!-- 학점 현황 -->
