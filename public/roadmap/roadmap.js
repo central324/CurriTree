@@ -3,6 +3,7 @@ import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curr
 import { escapeHtml, formatOfferedTerms } from '/roadmap/html.js';
 import { choosePopupPosition } from '/roadmap/popup-position.js';
 import { computePositions, DEFAULT_DIMS, routeEdges } from '/roadmap/positions.js';
+import { chooseZoom, isEdgeShown } from '/roadmap/view-rules.js';
 
 const CYTOSCAPE_URL = 'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.mjs';
 const DEPARTMENT_ID = 'ce';
@@ -88,7 +89,7 @@ function graphStyle(color) {
         label: 'data(label)',
         color: color.ink,
         'font-family': color.font,
-        'font-size': 16,
+        'font-size': 17,
         'text-valign': 'center',
         'text-halign': 'center',
         'text-wrap': 'wrap',
@@ -113,11 +114,11 @@ function graphStyle(color) {
         label: 'data(label)',
         color: color.accent,
         'font-family': color.font,
-        'font-size': 15,
+        'font-size': 22,
         'font-weight': 800,
         'text-valign': 'top',
         'text-halign': 'center',
-        'text-margin-y': -8,
+        'text-margin-y': -10,
         events: 'no',
       },
     },
@@ -131,7 +132,7 @@ function graphStyle(color) {
         label: 'data(label)',
         color: color.muted,
         'font-family': color.font,
-        'font-size': 13,
+        'font-size': 16,
         'font-weight': 700,
         'text-valign': 'center',
         events: 'no',
@@ -170,6 +171,8 @@ function graphStyle(color) {
       style: { width: 2.5, 'line-color': color.error, 'target-arrow-color': color.error },
     },
     { selector: '.is-faded', style: { opacity: 0.15 } },
+    // 권장 선행 점선은 기본으로 숨기고, 과목을 고르면 그 과목 경로의 점선만 나타남 (view-rules.js의 isEdgeShown)
+    { selector: 'edge.is-hidden', style: { opacity: 0, events: 'no' } },
     {
       selector: 'node.is-selected',
       style: { 'background-color': color.accent, 'border-color': color.accent, color: color.accentInk, 'border-width': 2 },
@@ -280,14 +283,15 @@ function inTrack(course) {
 function paint() {
   const { cy, selectedId } = state;
   cy.batch(() => {
-    cy.elements().removeClass('is-faded is-selected is-related is-path');
+    cy.elements().removeClass('is-faded is-selected is-related is-path is-hidden');
 
     if (!selectedId) {
       cy.nodes('.course').forEach((node) => {
         if (!inTrack(state.courseById.get(node.id()))) node.addClass('is-faded');
       });
       cy.edges().forEach((edge) => {
-        if (edge.source().hasClass('is-faded') || edge.target().hasClass('is-faded')) edge.addClass('is-faded');
+        if (!isEdgeShown(edge.data('relation'), false)) edge.addClass('is-hidden');
+        else if (edge.source().hasClass('is-faded') || edge.target().hasClass('is-faded')) edge.addClass('is-faded');
       });
       return;
     }
@@ -305,7 +309,11 @@ function paint() {
       else if (related.has(node.id())) node.addClass('is-related');
       else node.addClass('is-faded');
     });
-    cy.edges().forEach((edge) => edge.addClass(pathEdges.has(edge.id()) ? 'is-path' : 'is-faded'));
+    cy.edges().forEach((edge) => {
+      const onPath = pathEdges.has(edge.id());
+      if (!isEdgeShown(edge.data('relation'), onPath)) edge.addClass('is-hidden');
+      else edge.addClass(onPath ? 'is-path' : 'is-faded');
+    });
   });
 }
 
@@ -425,7 +433,7 @@ function protectedBoxes() {
   const { cy } = state;
   const { scroller, stage, legend } = elements;
   const offsetX = scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft;
-  const offsetY = scroller.offsetTop + scroller.clientTop;
+  const offsetY = scroller.offsetTop + scroller.clientTop - scroller.scrollTop;
   const zoom = cy.zoom();
   const pan = cy.pan();
   const toStage = (point) => ({ x: point.x * zoom + pan.x + offsetX, y: point.y * zoom + pan.y + offsetY });
@@ -462,7 +470,7 @@ function placeDetail() {
   const center = node.renderedPosition();
   const anchor = {
     x: center.x + scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft,
-    y: center.y + scroller.offsetTop + scroller.clientTop,
+    y: center.y + scroller.offsetTop + scroller.clientTop - scroller.scrollTop,
   };
   const { left, top } = choosePopupPosition({
     area: { width: elements.stage.clientWidth, height: scroller.offsetTop + scroller.offsetHeight },
@@ -487,6 +495,9 @@ function select(courseId, { reveal = false } = {}) {
     const box = state.cy.getElementById(state.selectedId).renderedBoundingBox();
     const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
     if (outside) scrollGraphTo((box.x1 + box.x2) / 2 - scroller.clientWidth / 2);
+    // 위아래로도 창 밖이면 가운데로 (그래프가 창보다 높을 때)
+    const outsideY = box.y1 < scroller.scrollTop || box.y2 > scroller.scrollTop + scroller.clientHeight;
+    if (outsideY) scroller.scrollTop = (box.y1 + box.y2) / 2 - scroller.clientHeight / 2;
   }
 }
 
@@ -536,14 +547,18 @@ function bindEvents() {
     if (event.target.closest('[data-action="clear"]')) select(null);
   });
 
-  // 그래프 위의 휠·터치패드 입력은 모두 "로드맵 가로 이동"으로만 씁니다.
-  // (끝에 닿아도 페이지 상하 스크롤로 넘기지 않음 → 좌우로 움직이다 페이지가 같이 움직이는 문제 방지)
-  // 로드맵이 창에 다 들어와 가로로 움직일 게 없으면 원래대로 페이지가 스크롤됩니다.
+  // 그래프 위의 휠·터치패드 입력:
+  // - 그래프가 창 높이에 다 들어오면: 모두 "로드맵 가로 이동"으로 씀 (좌우로 움직이다 페이지가 같이 움직이는 문제 방지)
+  // - 그래프가 창보다 높으면: 위아래 휠은 원래대로 로드맵 창을 위아래로, 좌우 입력(터치패드·Shift+휠)만 가로 이동
+  // 로드맵이 창에 다 들어와 가로로 움직일 게 없으면 원래대로 스크롤됩니다.
   elements.scroller.addEventListener(
     'wheel',
     (event) => {
       const { scroller } = elements;
       if (event.ctrlKey || scroller.scrollWidth <= scroller.clientWidth) return;
+      const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY) || event.shiftKey;
+      const tall = scroller.scrollHeight > scroller.clientHeight + 1;
+      if (tall && !horizontal) return;
       event.preventDefault();
       const unit = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? scroller.clientWidth : 1; // 줄·페이지 단위 → px
       const delta = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * unit;
@@ -654,13 +669,13 @@ function releasePageHeight(delay) {
 }
 
 // 로드맵 크기 맞추기
-// 1) 높이: 그래프 전체 높이를 로드맵 창 높이에 딱 맞춥니다(상하 스크롤 없음). → 확대 비율이 정해짐
+// 1) 높이: 그래프 전체 높이를 로드맵 창 높이에 맞추되, 글자가 작아지지 않게 확대 비율에 하한을 둡니다.
+//    (view-rules.js의 chooseZoom) 창보다 커지면 로드맵 창 안에서 위아래로 스크롤합니다.
 // 2) 넓이: 창이 넓어 공간이 남으면 과목 상자와 칸 사이 간격을 넓혀 창 가로를 채웁니다.
 //    창이 좁으면 기본 크기 그대로 두고 가로 스크롤로 봅니다.
 // 사용자가 확대·축소하거나 끌어서 옮기는 기능은 끕니다.
 const GRAPH_PADDING = 24;
-const GRAPH_PADDING_TOP = 64; // 위에 겹쳐 둔 범례 상자만큼 띄움
-const MAX_ZOOM = 1.3;
+const GRAPH_PADDING_TOP = 72; // 위에 겹쳐 둔 범례 상자 + 학년 제목만큼 띄움
 const MAX_NODE_WIDTH = 250; // 과목 상자를 넓힐 수 있는 최대 너비
 const MAX_GAP_SCALE = 2.5; // 칸 사이 간격을 넓힐 수 있는 최대 배율
 
@@ -697,7 +712,8 @@ function layoutGraph() {
   graph.style.height = '0px';
   let layout = renderLayout(DEFAULT_DIMS);
   let box = cy.elements().boundingBox();
-  let zoom = Math.min(MAX_ZOOM, (scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING) / box.h);
+  const zoomFor = () => chooseZoom(scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING, box.h);
+  let zoom = zoomFor();
 
   // 남는 가로 공간이 있으면 상자·간격을 넓혀 다시 그림
   const extra = (scroller.clientWidth - GRAPH_PADDING * 2) / zoom - box.w;
@@ -709,9 +725,10 @@ function layoutGraph() {
   // 넓이를 정한 뒤 가로 스크롤바가 생기면 보이는 높이가 줄어드므로 한 번 더 맞춤 (창에 꼭 맞으면 스크롤바 없음)
   const widthFor = (z) => Math.min(Math.ceil(box.w * z + GRAPH_PADDING * 2), extra > 1 ? scroller.clientWidth : Infinity);
   graph.style.width = `${widthFor(zoom)}px`;
-  zoom = Math.min(MAX_ZOOM, (scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING) / box.h);
+  zoom = zoomFor();
   graph.style.width = `${widthFor(zoom)}px`;
-  graph.style.height = `${scroller.clientHeight}px`;
+  // 글자 크기를 지키느라 창보다 높아지면 그만큼 그래프를 길게 두고 위아래 스크롤
+  graph.style.height = `${Math.max(scroller.clientHeight, Math.ceil(box.h * zoom + GRAPH_PADDING_TOP + GRAPH_PADDING))}px`;
 
   cy.resize();
   cy.zoom(zoom);
