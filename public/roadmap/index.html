@@ -44,11 +44,12 @@
           <li><span class="legend-node"></span>전공필수</li>
         </ul>
 
-        <div class="major-map__scroller" id="roadmap-scroller" tabindex="0" aria-label="로드맵 그래프">
-          <div class="major-map__graph" id="roadmap-graph" role="img" aria-label="과목 선후수 관계 그래프. 과목을 누르면 과목 정보가 열립니다.">
+        <div class="major-map__scroller" id="roadmap-scroller" tabindex="0" aria-label="로드맵 그래프. 방향키로 과목을 옮겨 다니고 Enter 키로 과목 정보를 엽니다." aria-describedby="roadmap-announce">
+          <div class="major-map__graph" id="roadmap-graph" role="img" aria-label="과목 선후수 관계 그래프. 과목을 누르거나, 그래프에 포커스를 두고 방향키로 고른 뒤 Enter 키를 누르면 과목 정보가 열립니다.">
             <p class="major-map__status" id="roadmap-status">교육과정을 불러오는 중입니다…</p>
           </div>
         </div>
+        <p class="visually-hidden" id="roadmap-announce" aria-live="polite"></p>
 
         <aside class="course-detail" id="course-detail" aria-live="polite" aria-label="과목 정보" hidden></aside>
       </div>

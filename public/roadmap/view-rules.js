@@ -26,3 +26,31 @@ export function fitColumns(availableWidth, columnCount) {
 export function isEdgeShown(relation, onSelectedPath) {
   return relation === 'hard' || onSelectedPath === true;
 }
+
+// 키보드로 과목 옮겨 다니기: 지금 과목에서 방향키를 누르면 갈 과목을 고릅니다.
+// - items: 고를 수 있는 과목 [{ id, x, y }] (그래프 좌표, x가 같으면 같은 학년 섹션)
+// - ↑↓: 같은 섹션 안 위·아래 과목 / ←→: 옆 섹션에서 높이가 가장 가까운 과목 / Home·End: 처음·마지막 과목
+// - 지금 과목이 없으면(처음 누를 때) 첫 과목. 더 갈 곳이 없으면 그대로.
+export function nextCourseByKey(items, currentId, key) {
+  if (items.length === 0) return null;
+  const ordered = [...items].sort((a, b) => a.x - b.x || a.y - b.y);
+  const current = items.find((item) => item.id === currentId);
+  if (!current || key === 'Home') return ordered[0].id;
+  if (key === 'End') return ordered[ordered.length - 1].id;
+
+  const sameColumn = (item) => Math.abs(item.x - current.x) < 1;
+  let found;
+  if (key === 'ArrowDown') found = ordered.find((item) => sameColumn(item) && item.y > current.y);
+  else if (key === 'ArrowUp') found = ordered.filter((item) => sameColumn(item) && item.y < current.y).at(-1);
+  else if (key === 'ArrowRight' || key === 'ArrowLeft') {
+    const step = key === 'ArrowRight' ? 1 : -1;
+    const columnXs = [...new Set(ordered.map((item) => item.x))].filter((x) => (x - current.x) * step >= 1);
+    if (columnXs.length > 0) {
+      const columnX = step > 0 ? Math.min(...columnXs) : Math.max(...columnXs);
+      found = ordered
+        .filter((item) => Math.abs(item.x - columnX) < 1)
+        .reduce((best, item) => (!best || Math.abs(item.y - current.y) < Math.abs(best.y - current.y) ? item : best), null);
+    }
+  }
+  return (found ?? current).id;
+}

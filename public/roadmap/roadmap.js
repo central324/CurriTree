@@ -1,9 +1,9 @@
 // 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 선택·트랙 필터를 처리합니다.
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
 import { escapeHtml, formatOfferedTerms } from '/roadmap/html.js';
-import { choosePopupPosition } from '/roadmap/popup-position.js';
+import { choosePopupPosition, isBetter } from '/roadmap/popup-position.js';
 import { computePositions, countColumns, routeEdges } from '/roadmap/positions.js';
-import { fitColumns, isEdgeShown, SECTION_PADDING } from '/roadmap/view-rules.js';
+import { fitColumns, isEdgeShown, nextCourseByKey, SECTION_PADDING } from '/roadmap/view-rules.js';
 
 const CYTOSCAPE_URL = 'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.mjs';
 const DEPARTMENT_ID = 'ce';
@@ -35,9 +35,10 @@ const elements = {
   graph: document.getElementById('roadmap-graph'),
   status: document.getElementById('roadmap-status'),
   detail: document.getElementById('course-detail'),
+  announce: document.getElementById('roadmap-announce'),
 };
 
-const state = { curriculum: null, courseById: new Map(), graph: null, cy: null, track: 'all', selectedId: null };
+const state = { curriculum: null, courseById: new Map(), graph: null, cy: null, track: 'all', selectedId: null, focusId: null };
 
 function showStatus(message) {
   elements.status.hidden = false;
@@ -182,6 +183,11 @@ function graphStyle(color) {
       style: { 'background-color': color.accent, 'border-color': color.accent, color: color.accentInk, 'border-width': 2 },
     },
     { selector: 'node.is-related', style: { 'border-color': color.accent, 'border-width': 3, opacity: 1 } },
+    // 키보드로 옮겨 다닐 때 지금 과목 표시 (상자 바깥 테두리)
+    {
+      selector: 'node.is-focused',
+      style: { 'underlay-color': color.accent, 'underlay-opacity': 0.35, 'underlay-padding': 6, 'underlay-shape': 'round-rectangle' },
+    },
     { selector: 'edge.is-path', style: { opacity: 1, width: 3, 'z-index': 10 } },
     {
       selector: 'edge.is-path[relation = "recommended"]',
@@ -511,8 +517,9 @@ function placeDetail() {
       maxTop = Math.max(minTop, view.bottom - height);
     }
     const position = choosePopupPosition({ area, popup: { width: detail.offsetWidth, height }, obstacles, anchor, minTop, maxTop, view });
-    if (!best || position.overlap < best.overlap) best = { ...position, width, height };
-    if (position.overlap === 0) break;
+    // 폭끼리도 같은 순서로 비교 (선 안 가림 → 화면에 다 보임). 둘 다 0이면 더 좁힐 필요 없음
+    if (!best || isBetter({ ...position, distance: 0 }, { ...best, distance: 0 })) best = { ...position, width, height };
+    if (position.overlap === 0 && position.offscreen === 0) break;
   }
   const { left, top, width, height } = best;
   detail.style.width = `${Math.min(width, area.width - 24)}px`;
@@ -530,24 +537,67 @@ function revealPopup(top, height, view) {
 // reveal: 과목 정보 팝업에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.
 function select(courseId, { reveal = false } = {}) {
   state.selectedId = state.courseById.has(courseId) ? courseId : null;
+  if (state.selectedId) state.focusId = state.selectedId; // 키보드로 이어서 옮겨 다닐 수 있게
   paint();
+  // 과목을 화면 안으로 먼저 옮긴 뒤 팝업 자리를 고릅니다. (부드러운 스크롤이면 끝난 뒤 한 번 더 고름)
+  if (reveal && state.selectedId) revealCourse(state.selectedId);
   renderDetail();
+}
 
-  if (reveal && state.selectedId) {
-    const { scroller } = elements;
-    const box = state.cy.getElementById(state.selectedId).renderedBoundingBox();
-    const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
-    if (outside) scrollGraphTo((box.x1 + box.x2) / 2 - scroller.clientWidth / 2);
-    // 위아래로 화면 밖이면 페이지를 스크롤해 가운데로
-    const top = scroller.getBoundingClientRect().top + box.y1;
-    const bottom = scroller.getBoundingClientRect().top + box.y2;
-    if (top < 0 || bottom > window.innerHeight) {
-      window.scrollTo({
-        top: window.scrollY + (top + bottom) / 2 - window.innerHeight / 2,
-        behavior: reducedMotion.matches ? 'auto' : 'smooth',
-      });
-    }
+// ---- 키보드 이동 ----
+function moveFocus(courseId) {
+  if (!courseId) return;
+  state.focusId = courseId;
+  showFocus(true);
+  revealCourse(courseId);
+  announceFocus();
+}
+
+// 포커스 표시는 그래프에 키보드 포커스가 있을 때만 보입니다.
+function showFocus(visible) {
+  state.cy.nodes('.is-focused').removeClass('is-focused');
+  if (visible && state.focusId) state.cy.getElementById(state.focusId).addClass('is-focused');
+}
+
+// 스크린 리더에 지금 과목을 알려 줍니다. 예: "컴퓨터구조, 3학년 1학기, 전공필수. Enter 키로 과목 정보 열기"
+function announceFocus() {
+  const course = state.courseById.get(state.focusId);
+  if (!course) return;
+  const [year, term] = String(course.recommendedTerm ?? '').split('-');
+  const when = year ? `${year}학년${term ? ` ${term}학기` : ''}` : '학기 확인 필요';
+  const action = state.selectedId === course.id ? '과목 정보 열림. Enter 키로 닫기' : 'Enter 키로 과목 정보 열기';
+  elements.announce.textContent = `${course.name}, ${when}, ${CATEGORY_LABELS[course.category] ?? course.category}. ${action}`;
+}
+
+// 고른 과목이 화면 밖이면 보이게 옮깁니다. (가로: 그래프 스크롤, 세로: 페이지 스크롤)
+function revealCourse(courseId) {
+  const { scroller } = elements;
+  const box = state.cy.getElementById(courseId).renderedBoundingBox();
+  const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
+  if (outside) scrollGraphTo((box.x1 + box.x2) / 2 - scroller.clientWidth / 2);
+  // 위아래로 화면 밖이면 페이지를 스크롤해 가운데로
+  const top = scroller.getBoundingClientRect().top + box.y1;
+  const bottom = scroller.getBoundingClientRect().top + box.y2;
+  if (top < 0 || bottom > window.innerHeight) {
+    window.scrollTo({
+      top: window.scrollY + (top + bottom) / 2 - window.innerHeight / 2,
+      behavior: reducedMotion.matches ? 'auto' : 'smooth',
+    });
+    if (!reducedMotion.matches) afterPageScroll(movePopup);
   }
+}
+
+// 페이지 스크롤이 끝나면 한 번 실행 (scrollend를 지원하지 않는 브라우저는 시간으로 대신)
+function afterPageScroll(callback) {
+  let done = false;
+  const run = () => {
+    if (done) return;
+    done = true;
+    window.removeEventListener('scrollend', run);
+    callback();
+  };
+  window.addEventListener('scrollend', run, { once: true });
+  setTimeout(run, 800);
 }
 
 function renderFilter() {
@@ -591,6 +641,35 @@ function bindEvents() {
   elements.scroller.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(movePopup, 120);
+  });
+
+  // 키보드: 로드맵 그래프에 포커스가 있을 때 방향키로 과목을 옮겨 다니고 Enter·Space로 과목 정보를 엽니다.
+  const { scroller } = elements;
+  scroller.addEventListener('keydown', (event) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const items = state.cy
+        .nodes('.course')
+        .filter((node) => inTrack(state.courseById.get(node.id())))
+        .map((node) => ({ id: node.id(), ...node.position() }));
+      moveFocus(nextCourseByKey(items, state.focusId, event.key));
+    } else if ((event.key === 'Enter' || event.key === ' ') && state.focusId) {
+      event.preventDefault();
+      select(state.selectedId === state.focusId ? null : state.focusId);
+      announceFocus();
+    }
+  });
+  scroller.addEventListener('focus', () => showFocus(true));
+  scroller.addEventListener('blur', () => showFocus(false));
+
+  // 창 높이만 바뀌어도(너비가 같아 그래프는 그대로) 팝업이 화면 밖에 걸리지 않게 자리를 다시 고릅니다.
+  let heightTimer;
+  let lastHeight = window.innerHeight;
+  window.addEventListener('resize', () => {
+    if (window.innerHeight === lastHeight) return;
+    lastHeight = window.innerHeight;
+    clearTimeout(heightTimer);
+    heightTimer = setTimeout(movePopup, 150);
   });
 
   document.addEventListener('keydown', (event) => {
