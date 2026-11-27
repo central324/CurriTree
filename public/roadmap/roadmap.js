@@ -1,7 +1,6 @@
-// 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 선택·트랙 필터를 처리합니다.
+// 전공 로드맵 화면: 교육과정을 불러와 Cytoscape 그래프로 그리고, 과목 클릭·트랙 필터를 처리합니다.
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
 import { escapeHtml, formatOfferedTerms } from '/roadmap/html.js';
-import { choosePopupPosition } from '/roadmap/popup-position.js';
 import { computePositions, countColumns, routeEdges } from '/roadmap/positions.js';
 import { fitColumns, isEdgeShown, SECTION_PADDING } from '/roadmap/view-rules.js';
 
@@ -29,12 +28,12 @@ const OFFERED_LABELS = { 1: '1학기', 2: '2학기', S: '여름학기', W: '겨�
 
 const elements = {
   filter: document.getElementById('track-filter'),
-  select: document.getElementById('course-select'),
   stage: document.getElementById('roadmap-stage'),
   legend: document.getElementById('roadmap-legend'),
   scroller: document.getElementById('roadmap-scroller'),
   graph: document.getElementById('roadmap-graph'),
   status: document.getElementById('roadmap-status'),
+  dock: document.getElementById('course-dock'),
   detail: document.getElementById('course-detail'),
 };
 
@@ -340,7 +339,7 @@ function courseList(ids, emptyText) {
 function renderDetail() {
   const course = state.courseById.get(state.selectedId);
   if (!course) {
-    closeDetail();
+    elements.detail.innerHTML = GUIDE_HTML;
     return;
   }
 
@@ -368,7 +367,7 @@ function renderDetail() {
     <header class="course-detail__head">
       <span class="type ${isRequired ? 'type--required' : 'type--elective'}">${escapeHtml(CATEGORY_LABELS[course.category] ?? course.category)}</span>
       <h2>${escapeHtml(course.name)}</h2>
-      <button type="button" class="button button--quiet course-detail__clear" data-action="clear">닫기</button>
+      <button type="button" class="button button--quiet course-detail__clear" data-action="clear">선택 해제</button>
     </header>
     <dl class="course-detail__facts">
       <div><dt>학점</dt><dd>${escapeHtml(course.credits)}학점</dd></div>
@@ -386,117 +385,39 @@ function renderDetail() {
     </p>
     ${unknownNote}`;
 
-  openDetail();
 }
 
-// ---- 과목 정보 팝업 ----
-// 열기: 자리를 정한 뒤 살짝 아래에서 떠오르며 나타남 / 다른 과목 선택: 새 자리로 부드럽게 이동 / 닫기: 흐려지며 사라짐
-const POPUP_MS = 200; // roadmap.css의 --popup-duration과 같은 값
-const POPUP_MOVE_MS = 260; // roadmap.css의 팝업 left/top 이동 시간과 같은 값
-let closeTimer;
+// 과목을 고르지 않았을 때 과목 정보 칸에 보여 줄 안내
+const GUIDE_HTML = `
+  <p class="course-detail__title">과목 정보</p>
+  <p class="course-detail__empty">과목을 누르면 여기에 학점, 선수 과목, 이어서 들을 수 있는 과목이 나옵니다.</p>
+  <p class="course-detail__empty">빨간 선은 먼저 꼭 들어야 하는 과목(필수 선수)입니다. 과목을 누르면 먼저 들으면 좋은 과목(권장 선행)이 점선으로 나타납니다.</p>`;
 
-function openDetail() {
-  const { detail } = elements;
-  clearTimeout(closeTimer);
-  const wasOpen = !detail.hidden && detail.classList.contains('is-open');
-  detail.hidden = false;
+// ---- 과목 정보 칸 ----
+// 과목이 가장 적은 학년 섹션(1학년) 아래 빈 자리(positions.js의 panel)에 놓습니다.
+// 안쪽 칸은 sticky라서 페이지를 내려도 그 빈 자리 안에서 화면 위쪽에 붙어 따라옵니다.
+const DOCK_INSET = 8; // 학년 섹션 상자 안쪽으로 들여 놓는 거리
 
-  if (wasOpen) {
-    movePopup();
+function placeDock() {
+  const { dock, scroller } = elements;
+  const { layout, cy } = state;
+  const panel = layout?.panel;
+  dock.classList.toggle('course-dock--below', !panel); // 빈 자리가 없으면(섹션 1개) 그래프 아래에 둠
+  if (!panel) {
+    dock.removeAttribute('style');
     return;
   }
-  detail.classList.add('is-placing'); // 처음 열 때는 자리 이동 애니메이션 없이 바로 그 자리에
-  placeDetail();
-  void detail.offsetWidth; // 닫힌 모습을 먼저 그리게 해서 나타나는 애니메이션이 보이도록 함
-  detail.classList.remove('is-placing');
-  detail.classList.add('is-open');
-}
-
-// 열려 있는 팝업을 새 자리로 옮깁니다. 위로 옮겨 가면 페이지가 짧아질 수 있으므로 높이를 붙잡고, 이동이 끝난 뒤 놓아 줍니다.
-function movePopup() {
-  if (elements.detail.hidden || !state.selectedId) return;
-  holdPageHeight();
-  placeDetail();
-  releasePageHeight(POPUP_MOVE_MS);
-}
-
-function closeDetail() {
-  const { detail } = elements;
-  if (detail.hidden) return;
-  holdPageHeight(); // 팝업이 사라져 페이지가 짧아져도 화면이 갑자기 끌려 올라가지 않게
-  detail.classList.remove('is-open');
-  clearTimeout(closeTimer);
-  const hide = () => {
-    if (!detail.classList.contains('is-open')) {
-      detail.hidden = true;
-      detail.innerHTML = '';
-    }
-  };
-  // 동작 줄이기: 기다리지 않고 바로 숨김
-  if (reducedMotion.matches) hide();
-  else closeTimer = setTimeout(hide, POPUP_MS);
-  releasePageHeight(reducedMotion.matches ? 0 : POPUP_MS + 20); // 사라진 뒤 필요한 만큼만 부드럽게 올라감
-}
-
-// 화면에 그려진 선택 과목·관련 과목·강조 화살표·범례를 "가리면 안 되는 상자"로 모읍니다. (로드맵 창 기준 좌표)
-function protectedBoxes() {
-  const { cy } = state;
-  const { scroller, stage, legend } = elements;
-  const offsetX = scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft;
-  const offsetY = scroller.offsetTop + scroller.clientTop - scroller.scrollTop;
-  const zoom = cy.zoom();
   const pan = cy.pan();
-  const toStage = (point) => ({ x: point.x * zoom + pan.x + offsetX, y: point.y * zoom + pan.y + offsetY });
-  const inflate = (box, size) => ({ x1: box.x1 - size, y1: box.y1 - size, x2: box.x2 + size, y2: box.y2 + size });
-
-  const boxes = [];
-  cy.nodes('.is-selected, .is-related').forEach((node) => {
-    const box = node.renderedBoundingBox({ includeLabels: false });
-    boxes.push(inflate({ x1: box.x1 + offsetX, y1: box.y1 + offsetY, x2: box.x2 + offsetX, y2: box.y2 + offsetY }, 8));
-  });
-  cy.edges('.is-path').forEach((edge) => {
-    const points = [edge.sourceEndpoint(), ...(edge.segmentPoints() ?? []), edge.targetEndpoint()].map(toStage);
-    for (let i = 1; i < points.length; i += 1) {
-      const [a, b] = [points[i - 1], points[i]];
-      boxes.push(inflate({ x1: Math.min(a.x, b.x), y1: Math.min(a.y, b.y), x2: Math.max(a.x, b.x), y2: Math.max(a.y, b.y) }, 8));
-    }
-  });
-
-  const stageBox = stage.getBoundingClientRect();
-  const legendBox = legend.getBoundingClientRect();
-  if (legendBox.width > 0 && getComputedStyle(legend).position === 'absolute') {
-    boxes.push(inflate({ x1: legendBox.left - stageBox.left, y1: legendBox.top - stageBox.top, x2: legendBox.right - stageBox.left, y2: legendBox.bottom - stageBox.top }, 8));
-  }
-  return boxes;
+  const half = layout.dims.nodeWidth / 2 + SECTION_PADDING - DOCK_INSET;
+  dock.style.left = `${scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft + pan.x + panel.x - half}px`;
+  dock.style.top = `${scroller.offsetTop + scroller.clientTop + pan.y + panel.top}px`;
+  dock.style.width = `${half * 2}px`;
+  dock.style.height = `${panel.bottom - panel.top}px`;
 }
 
-// 팝업 위치: 강조된 경로(선택 과목·관련 과목·화살표)를 가리지 않는 자리 중 선택 과목에 가장 가까운 곳.
-// 다른(흐리게 된) 과목은 가려도 됩니다. 로드맵 창 아래로 넘어가도 됩니다.
-function placeDetail() {
-  const { detail, scroller } = elements;
-  if (detail.hidden || !state.selectedId) return;
-
-  const node = state.cy.getElementById(state.selectedId);
-  const center = node.renderedPosition();
-  const anchor = {
-    x: center.x + scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft,
-    y: center.y + scroller.offsetTop + scroller.clientTop - scroller.scrollTop,
-  };
-  const { left, top } = choosePopupPosition({
-    area: { width: elements.stage.clientWidth, height: scroller.offsetTop + scroller.offsetHeight },
-    popup: { width: detail.offsetWidth, height: detail.offsetHeight },
-    obstacles: protectedBoxes(),
-    anchor,
-    minTop: scroller.offsetTop + 12,
-  });
-  detail.style.left = `${left}px`;
-  detail.style.top = `${top}px`;
-}
-
-// reveal: 목록·상세 패널에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.
+// reveal: 과목 정보 칸에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.
 function select(courseId, { reveal = false } = {}) {
   state.selectedId = state.courseById.has(courseId) ? courseId : null;
-  elements.select.value = state.selectedId ?? '';
   paint();
   renderDetail();
 
@@ -527,14 +448,6 @@ function renderFilter() {
     .join('');
 }
 
-function renderSelect() {
-  const sorted = [...state.curriculum.courses].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-  elements.select.innerHTML =
-    '<option value="">과목을 고르세요</option>' +
-    sorted.map((course) => `<option value="${escapeHtml(course.id)}">${escapeHtml(course.name)}</option>`).join('');
-  elements.select.disabled = false;
-}
-
 function bindEvents() {
   state.cy.on('tap', 'node.course', (event) => {
     const id = event.target.id();
@@ -545,8 +458,6 @@ function bindEvents() {
   });
   state.cy.on('mouseover', 'node.course', () => elements.graph.classList.add('is-pointer'));
   state.cy.on('mouseout', 'node.course', () => elements.graph.classList.remove('is-pointer'));
-
-  elements.select.addEventListener('change', () => select(elements.select.value || null, { reveal: true }));
 
   elements.filter.addEventListener('click', (event) => {
     const button = event.target.closest('[data-track]');
@@ -563,12 +474,8 @@ function bindEvents() {
     if (event.target.closest('[data-action="clear"]')) select(null);
   });
 
-  // 가로로 스크롤하면 강조된 경로의 화면 위치가 바뀌므로, 스크롤이 멈추면 팝업 자리를 다시 고릅니다.
-  let scrollTimer;
-  elements.scroller.addEventListener('scroll', () => {
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(movePopup, 120);
-  });
+  // 좁은 화면에서 가로로 스크롤하면 과목 정보 칸도 1학년 섹션을 따라 옮깁니다.
+  elements.scroller.addEventListener('scroll', placeDock, { passive: true });
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.selectedId) select(null);
@@ -583,7 +490,6 @@ function bindEvents() {
     resizeTimer = setTimeout(() => {
       layoutGraph();
       paint();
-      movePopup();
     }, 150);
   }).observe(elements.scroller);
 }
@@ -620,50 +526,6 @@ function stepSmoothScroll() {
   smoothScroll.current += distance * SCROLL_EASE;
   scroller.scrollLeft = smoothScroll.current;
   smoothScroll.frame = requestAnimationFrame(stepSmoothScroll);
-}
-
-// ---- 페이지 높이 붙잡기 ----
-// 팝업은 로드맵 아래로 펼쳐져 페이지를 길게 만듭니다. 닫거나 위로 옮길 때 페이지가 갑자기 짧아지면
-// 브라우저가 스크롤 위치를 억지로 끌어올려 화면이 "툭" 움직입니다.
-// 그래서 바뀌기 전 높이를 붙잡아 두고, 화면을 억지로 옮기지 않습니다.
-// 남은 빈 공간은 사용자가 직접 위로 스크롤하는 만큼만 줄여 나갑니다. (강제 이동 0)
-let releaseTimer;
-
-function holdPageHeight() {
-  clearTimeout(releaseTimer);
-  window.removeEventListener('scroll', shrinkHeldHeight);
-  const height = document.documentElement.scrollHeight;
-  const held = parseFloat(document.body.style.minHeight) || 0;
-  document.body.style.minHeight = `${Math.max(height, held)}px`;
-}
-
-// 팝업까지 포함한 "원래 필요한" 페이지 높이 (문서 좌표)
-function naturalPageHeight() {
-  const { detail } = elements;
-  const pageBottom = document.querySelector('.major-map').getBoundingClientRect().bottom + window.scrollY;
-  if (detail.hidden) return pageBottom;
-  const stageTop = elements.stage.getBoundingClientRect().top + window.scrollY;
-  return Math.max(pageBottom, stageTop + parseFloat(detail.style.top) + detail.offsetHeight + 24);
-}
-
-// 지금 보이는 화면 아래 끝까지는 남겨 두고, 그보다 아래 빈 공간만 줄입니다.
-function shrinkHeldHeight() {
-  const natural = naturalPageHeight();
-  const visibleBottom = window.scrollY + window.innerHeight;
-  if (visibleBottom <= natural + 1) {
-    document.body.style.minHeight = '';
-    window.removeEventListener('scroll', shrinkHeldHeight);
-    return;
-  }
-  document.body.style.minHeight = `${Math.ceil(visibleBottom)}px`;
-}
-
-function releasePageHeight(delay) {
-  clearTimeout(releaseTimer);
-  releaseTimer = setTimeout(() => {
-    shrinkHeldHeight();
-    if (document.body.style.minHeight) window.addEventListener('scroll', shrinkHeldHeight, { passive: true });
-  }, delay);
 }
 
 // 로드맵 크기 맞추기: 화면 전체 너비를 학년 섹션 수(보통 4)로 나눠 씁니다.
@@ -706,6 +568,7 @@ function layoutGraph() {
   cy.pan({ x: (width - box.w) / 2 - box.x1, y: GRAPH_PADDING_TOP - box.y1 });
   state.layout = layout;
   state.layoutWidth = scroller.clientWidth;
+  placeDock();
 }
 
 async function loadCurriculum() {
@@ -742,10 +605,10 @@ async function start() {
   });
 
   renderFilter();
-  renderSelect();
   bindEvents();
   layoutGraph();
   paint();
+  renderDetail();
 }
 
 start();

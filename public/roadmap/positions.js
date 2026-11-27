@@ -10,6 +10,8 @@
 //   - recommendedTerm "2-1"  → 2학년 섹션의 1학기
 //   - recommendedTerm "1"    → 1학년 섹션의 1학기 과목들 아래 (학기 미지정 표시)
 //   - recommendedTerm null   → 맨 오른쪽 "학기 미정" 섹션
+//   - 과목이 가장 적은 학년(실제 데이터는 1학년)은 2학기를 1학기 바로 아래에 붙이고,
+//     그 아래 빈 자리(panel)를 화면이 과목 정보 칸으로 씁니다.
 
 // 기본 크기. 화면 쪽에서 화면 너비에 맞춰 nodeWidth·columnWidth를 정해 넘깁니다(computePositions의 dims).
 export const NODE_WIDTH = 200;
@@ -50,6 +52,7 @@ export function countColumns(courses) {
  * - years: [{ id, label, year, x }]                   학년 섹션 (과목이 있는 학년만, 학기 미정은 마지막)
  * - headers: [{ id, label, year, x, y }]              학기 제목
  * - columns: 섹션 가운데 x 목록, lastRowY: 맨 아래 행 y (섹션 높이를 맞출 때 씀)
+ * - panel: { year, x, top, bottom } 과목이 가장 적은 학년 섹션의 빈 자리 (섹션이 2개 이상일 때만, 아니면 null)
  * - width, height: 과목 상자 바깥 기준 전체 크기
  * - dims: 배치에 쓴 크기 (routeEdges가 같은 값을 씀)
  * dims: DEFAULT_DIMS 중 바꿀 값만 넘깁니다.
@@ -77,6 +80,11 @@ export function computePositions(courses, dimsOverride = {}) {
   const firstRowY = (row) => headerOffset + row * rowHeight;
   const secondRowY = (row) => secondHeaderY + headerOffset + row * rowHeight;
 
+  // 과목이 가장 적은 학년 (같으면 앞 학년)
+  const totals = presentYears.map((year) => Object.values(groups.get(year)).reduce((sum, list) => sum + list.length, 0));
+  const compactYear = presentYears.length > 1 ? presentYears[totals.indexOf(Math.min(...totals))] : null;
+  let panel = null;
+
   const positions = new Map();
   const years = [];
   const headers = [];
@@ -86,15 +94,22 @@ export function computePositions(courses, dimsOverride = {}) {
   for (const year of presentYears) {
     const group = groups.get(year);
     const x = column * columnWidth;
+    const first = [...group[1], ...group.whole];
     years.push({ id: `year:${year}`, label: `${year}학년`, year, x });
     headers.push({ id: `term:${year}-1`, label: '1학기', year, x, y: 0 });
-    headers.push({ id: `term:${year}-2`, label: '2학기', year, x, y: secondHeaderY });
-
-    [...group[1], ...group.whole].forEach((id, row) => {
+    first.forEach((id, row) => {
       positions.set(id, { x, y: firstRowY(row), year, wholeYear: row >= group[1].length });
     });
-    group[2].forEach((id, row) => positions.set(id, { x, y: secondRowY(row), year, wholeYear: false }));
-    if (group[2].length > 0) lastRowY = Math.max(lastRowY, secondRowY(group[2].length - 1));
+
+    if (year === compactYear) {
+      // 2학기 제목을 1학기 마지막 과목 바로 다음 줄에 (다른 학년과 같은 격자 위라 화살표 틈은 그대로)
+      headers.push({ id: `term:${year}-2`, label: '2학기', year, x, y: firstRowY(first.length) });
+      group[2].forEach((id, row) => positions.set(id, { x, y: firstRowY(first.length + 1 + row), year, wholeYear: false }));
+      panel = { year, x, top: firstRowY(first.length + group[2].length) + rowHeight / 2, bottom: null };
+    } else {
+      headers.push({ id: `term:${year}-2`, label: '2학기', year, x, y: secondHeaderY });
+      group[2].forEach((id, row) => positions.set(id, { x, y: secondRowY(row), year, wholeYear: false }));
+    }
     column += 1;
   }
 
@@ -106,6 +121,7 @@ export function computePositions(courses, dimsOverride = {}) {
     column += 1;
   }
   lastRowY = Math.max(lastRowY, ...[...positions.values()].map((position) => position.y));
+  if (panel) panel.bottom = lastRowY + nodeHeight / 2;
 
   return {
     courses: positions,
@@ -113,6 +129,7 @@ export function computePositions(courses, dimsOverride = {}) {
     headers,
     columns: years.map((year) => year.x),
     lastRowY,
+    panel,
     width: Math.max(0, (column - 1) * columnWidth + nodeWidth),
     height: lastRowY + nodeHeight / 2,
     dims,
