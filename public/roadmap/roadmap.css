@@ -50,8 +50,10 @@
   color: var(--color-ink-muted);
 }
 
-.major-map__select {
-  min-width: 220px;
+/* 로드맵이 길어 페이지 세로 스크롤바가 생겨도 너비가 바뀌지 않게 스크롤바 자리를 처음부터 비워 둠
+   (너비가 바뀌면 학년 섹션을 다시 계산해야 해서 화면이 한 번 움직임) */
+:root {
+  scrollbar-gutter: stable;
 }
 
 /* 로드맵 창: 범례와 과목 정보 팝업을 겹쳐 놓기 위한 기준 상자 */
@@ -59,23 +61,17 @@
   position: relative;
 }
 
-/* 범례: 그래프 위 오른쪽 위에 겹쳐 둠 (가로 스크롤해도 제자리) */
+/* 범례: 그래프 바로 위 오른쪽 (학년 섹션 제목을 가리지 않도록 그래프 밖에 둠) */
 .major-map__legend {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  z-index: 2;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-4);
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0;
   list-style: none;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-ink-muted);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
 }
 
 .major-map__legend li {
@@ -103,13 +99,10 @@
   background: var(--color-accent-soft);
 }
 
-/* 그래프 창: 화면 높이 대부분을 쓰고, 넘치는 넓이는 가로 스크롤 (상하 스크롤·확대·끌기 없음) */
+/* 그래프 창: 화면 너비 전체를 학년 섹션 4개로 나눠 씀. 높이는 과목 수만큼 늘어나고 페이지를 위아래로 스크롤.
+   창이 아주 좁을 때만 가로 스크롤 (확대·끌기 없음) */
 .major-map__scroller {
-  height: max(520px, calc(100vh - 170px));
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  overflow-x: auto;
+  overflow-x: auto; /* 바깥 테두리·배경 없이 학년 섹션 상자만 보이게 */
   overflow-y: hidden;
   scrollbar-color: var(--color-line) transparent;
 }
@@ -151,9 +144,11 @@
     top 260ms ease-in-out;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  width: min(400px, calc(100% - var(--space-8)));
-  padding: var(--space-4);
+  gap: var(--space-3);
+  width: min(340px, calc(100% - var(--space-8))); /* 작게 만들어 강조된 선을 피할 빈 자리가 많아지게 */
+  max-height: calc(100vh - var(--topbar-height) - var(--space-6)); /* 화면보다 길면 팝업 안에서 스크롤 */
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-line);
   border-top: 3px solid var(--color-accent);
   border-radius: var(--radius-md);
@@ -208,27 +203,36 @@
   font-size: 13px;
 }
 
-.course-detail__facts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2) var(--space-4);
+/* 학점·권장 학기·개설 학기를 한 줄로 */
+.course-detail__meta,
+.course-detail__tracks {
   margin: 0;
 }
 
-.course-detail__facts dt {
+.course-detail__tracks {
+  margin-top: calc(-1 * var(--space-2));
   font-size: 13px;
   color: var(--color-ink-muted);
 }
 
-.course-detail__facts dd {
+/* 선후수 관계: 왼쪽 이름, 오른쪽 과목 버튼 */
+.course-detail__relations {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
   margin: 0;
 }
 
-.course-detail section h3 {
-  margin: 0 0 var(--space-1);
+.course-detail__relations dt {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.course-detail__relations dd {
+  margin: 0;
 }
 
 .course-detail__list {
@@ -281,16 +285,6 @@
 @media (max-width: 900px) {
   .major-map {
     padding: var(--space-6) var(--space-4) var(--space-12);
-  }
-
-  .major-map__scroller {
-    height: max(420px, calc(100vh - 300px));
-  }
-
-  /* 좁은 화면: 범례는 그래프 위 한 줄로 */
-  .major-map__legend {
-    position: static;
-    margin-bottom: var(--space-2);
   }
 
   .course-detail {

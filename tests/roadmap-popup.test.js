@@ -8,6 +8,15 @@ const popup = { width: 400, height: 500 };
 const rectOf = ({ left, top }) => ({ x1: left, y1: top, x2: left + popup.width, y2: top + popup.height });
 
 describe('choosePopupPosition', () => {
+  test('maxTop을 주면 그 범위(화면에 보이는 높이) 안에서만 고르고 아래로 보내지 않는다', () => {
+    const tall = { width: 1200, height: 3000 };
+    // 화면에 보이는 높이(200~400)는 경로로 꽉 차고, 그 아래(1000~)에만 빈 자리가 있는 경우
+    const obstacles = [{ x1: 0, y1: 200, x2: 1200, y2: 900 }];
+    const position = choosePopupPosition({ area: tall, popup, obstacles, anchor: { x: 600, y: 300 }, minTop: 200, maxTop: 400 });
+    assert.ok(position.top >= 200 && position.top <= 400, JSON.stringify(position));
+    assert.ok(position.overlap > 0);
+  });
+
   test('가리면 안 되는 상자와 겹치지 않는 자리를 고른다', () => {
     const obstacles = [
       { x1: 0, y1: 0, x2: 600, y2: 300 }, // 왼쪽 위 경로
@@ -16,6 +25,25 @@ describe('choosePopupPosition', () => {
     const position = choosePopupPosition({ area, popup, obstacles, anchor: { x: 300, y: 150 } });
     assert.equal(position.overlap, 0);
     for (const box of obstacles) assert.equal(overlapArea(rectOf(position), box), 0);
+  });
+
+  test('둘 다 안 가리면 지금 화면(view)에 다 보이는 자리를 먼 자리보다 먼저 고른다', () => {
+    const tall = { width: 1200, height: 3000 };
+    const view = { top: 1000, bottom: 1600 };
+    // 고른 과목(1100 부근) 바로 위쪽은 화면 밖, 화면 안 오른쪽은 비어 있음
+    const obstacles = [{ x1: 0, y1: 1050, x2: 500, y2: 1150 }];
+    const position = choosePopupPosition({ area: tall, popup, obstacles, anchor: { x: 250, y: 1100 }, minTop: 500, maxTop: 1500, view });
+    assert.equal(position.overlap, 0);
+    assert.ok(position.top >= view.top && position.top + popup.height <= view.bottom, JSON.stringify(position));
+  });
+
+  test('어딘가 가려야 하면 무게가 큰 상자(고른 과목)는 피한다', () => {
+    const obstacles = [
+      { x1: 0, y1: 0, x2: 1200, y2: 700 }, // 창 전체에 퍼진 경로
+      { x1: 100, y1: 100, x2: 300, y2: 160, weight: 1000 }, // 고른 과목
+    ];
+    const position = choosePopupPosition({ area, popup, obstacles, anchor: { x: 200, y: 130 }, maxTop: 150 });
+    assert.equal(overlapArea(rectOf(position), obstacles[1]), 0);
   });
 
   test('겹치지 않는 자리 중에서는 선택 과목에 가장 가까운 곳', () => {

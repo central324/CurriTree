@@ -33,12 +33,6 @@
           <div class="chips" id="track-filter" role="group" aria-labelledby="track-label"></div>
         </div>
 
-        <label class="field major-map__select">
-          <span>과목 선택</span>
-          <select id="course-select" disabled>
-            <option value="">불러오는 중…</option>
-          </select>
-        </label>
       </section>
       </div>
 
@@ -46,15 +40,16 @@
       <div class="major-map__stage" id="roadmap-stage">
         <ul class="major-map__legend" id="roadmap-legend" aria-label="범례">
           <li><span class="legend-line legend-line--hard"></span>필수 선수</li>
-          <li><span class="legend-line legend-line--recommended"></span>권장 선행</li>
+          <li><span class="legend-line legend-line--recommended"></span>권장 선행 (과목을 고르면 표시)</li>
           <li><span class="legend-node"></span>전공필수</li>
         </ul>
 
-        <div class="major-map__scroller" id="roadmap-scroller" tabindex="0" aria-label="로드맵 그래프 (좌우로 스크롤)">
-          <div class="major-map__graph" id="roadmap-graph" role="img" aria-label="과목 선후수 관계 그래프. 과목 선택 목록으로도 같은 정보를 볼 수 있습니다.">
+        <div class="major-map__scroller" id="roadmap-scroller" tabindex="0" aria-label="로드맵 그래프. 방향키로 과목을 옮겨 다니고 Enter 키로 과목 정보를 엽니다." aria-describedby="roadmap-announce">
+          <div class="major-map__graph" id="roadmap-graph" role="img" aria-label="과목 선후수 관계 그래프. 과목을 누르거나, 그래프에 포커스를 두고 방향키로 고른 뒤 Enter 키를 누르면 과목 정보가 열립니다.">
             <p class="major-map__status" id="roadmap-status">교육과정을 불러오는 중입니다…</p>
           </div>
         </div>
+        <p class="visually-hidden" id="roadmap-announce" aria-live="polite"></p>
 
         <aside class="course-detail" id="course-detail" aria-live="polite" aria-label="과목 정보" hidden></aside>
       </div>
