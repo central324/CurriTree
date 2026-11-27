@@ -37,6 +37,7 @@ describe('nextCourseByKey', () => {
   test('Home·End는 처음·마지막 과목, 과목이 없으면 null', () => {
     assert.equal(nextCourseByKey(items, 'd', 'Home'), 'a');
     assert.equal(nextCourseByKey(items, 'a', 'End'), 'f');
+    assert.equal(nextCourseByKey(items, null, 'End'), 'f'); // 처음 누른 End도 마지막 과목
     assert.equal(nextCourseByKey([], null, 'ArrowDown'), null);
   });
 });

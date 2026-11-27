@@ -420,10 +420,11 @@ function openDetail() {
 }
 
 // 열려 있는 팝업을 새 자리로 옮깁니다. 위로 옮겨 가면 페이지가 짧아질 수 있으므로 높이를 붙잡고, 이동이 끝난 뒤 놓아 줍니다.
-function movePopup() {
+// reveal: 고른 자리가 화면을 조금 벗어나면 페이지를 스크롤할지 (가로 스크롤 뒤처럼 사용자가 다른 곳을 보는 중이면 false)
+function movePopup({ reveal = true } = {}) {
   if (elements.detail.hidden || !state.selectedId) return;
   holdPageHeight();
-  placeDetail();
+  placeDetail({ reveal });
   releasePageHeight(POPUP_MOVE_MS);
 }
 
@@ -482,7 +483,7 @@ function protectedBoxes() {
 
 // 팝업 위치: 강조된 경로(선택 과목·관련 과목·화살표)를 가리지 않는 자리 중 선택 과목에 가장 가까운 곳.
 // 다른(흐리게 된) 과목은 가려도 됩니다. 로드맵 창 아래로 넘어가도 됩니다.
-function placeDetail() {
+function placeDetail({ reveal = true } = {}) {
   const { detail, scroller } = elements;
   if (detail.hidden || !state.selectedId) return;
 
@@ -525,7 +526,7 @@ function placeDetail() {
   detail.style.width = `${Math.min(width, area.width - 24)}px`;
   detail.style.left = `${left}px`;
   detail.style.top = `${top}px`;
-  revealPopup(top, height, view);
+  if (reveal) revealPopup(top, height, view);
 }
 
 // 고른 자리가 화면 위·아래로 조금 벗어나면, 팝업이 다 보일 만큼만 페이지를 스크롤합니다. (고른 과목도 같이 보이는 범위에서 고름)
@@ -549,7 +550,7 @@ function moveFocus(courseId) {
   if (!courseId) return;
   state.focusId = courseId;
   showFocus(true);
-  revealCourse(courseId);
+  revealCourse(courseId, { placePopup: false });
   announceFocus();
 }
 
@@ -570,7 +571,8 @@ function announceFocus() {
 }
 
 // 고른 과목이 화면 밖이면 보이게 옮깁니다. (가로: 그래프 스크롤, 세로: 페이지 스크롤)
-function revealCourse(courseId) {
+// placePopup: 스크롤이 끝난 뒤 팝업 자리를 다시 고를지 (키보드로 포커스만 옮길 때는 false)
+function revealCourse(courseId, { placePopup = true } = {}) {
   const { scroller } = elements;
   const box = state.cy.getElementById(courseId).renderedBoundingBox();
   const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
@@ -583,7 +585,7 @@ function revealCourse(courseId) {
       top: window.scrollY + (top + bottom) / 2 - window.innerHeight / 2,
       behavior: reducedMotion.matches ? 'auto' : 'smooth',
     });
-    if (!reducedMotion.matches) afterPageScroll(movePopup);
+    if (placePopup && !reducedMotion.matches) afterPageScroll(movePopup);
   }
 }
 
@@ -640,7 +642,7 @@ function bindEvents() {
   let scrollTimer;
   elements.scroller.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(movePopup, 120);
+    scrollTimer = setTimeout(() => movePopup({ reveal: false }), 120);
   });
 
   // 키보드: 로드맵 그래프에 포커스가 있을 때 방향키로 과목을 옮겨 다니고 Enter·Space로 과목 정보를 엽니다.
@@ -685,6 +687,7 @@ function bindEvents() {
     resizeTimer = setTimeout(() => {
       layoutGraph();
       paint();
+      showFocus(document.activeElement === elements.scroller); // 노드를 새로 만들었으니 포커스 표시를 다시
       movePopup();
     }, 150);
   }).observe(elements.scroller);
