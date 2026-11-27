@@ -629,6 +629,11 @@ function bindEvents() {
     state.track = button.dataset.track;
     renderFilter();
     if (state.selectedId && !inTrack(state.courseById.get(state.selectedId))) state.selectedId = null;
+    // 키보드 포커스도 트랙 밖이면 지움 (Enter로 트랙 밖 과목이 다시 열리지 않게)
+    if (state.focusId && !inTrack(state.courseById.get(state.focusId))) {
+      state.focusId = null;
+      showFocus(false);
+    }
     select(state.selectedId);
   });
 
@@ -655,7 +660,7 @@ function bindEvents() {
         .filter((node) => inTrack(state.courseById.get(node.id())))
         .map((node) => ({ id: node.id(), ...node.position() }));
       moveFocus(nextCourseByKey(items, state.focusId, event.key));
-    } else if ((event.key === 'Enter' || event.key === ' ') && state.focusId) {
+    } else if ((event.key === 'Enter' || event.key === ' ') && state.focusId && inTrack(state.courseById.get(state.focusId))) {
       event.preventDefault();
       select(state.selectedId === state.focusId ? null : state.focusId);
       announceFocus();
