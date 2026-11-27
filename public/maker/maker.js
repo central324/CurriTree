@@ -14,6 +14,14 @@ const admissionYearInput = document.getElementById(
 import {
   isMakerRequestCurrent,
 } from './request-scope.js';
+import {
+  buildDegreeProgress,
+} from './degree-progress.js';
+
+import {
+  renderDegreeProgressView,
+} from './degree-progress-view.js';
+
 
 const admissionScope = document.getElementById(
   "maker-admission-scope"
@@ -453,7 +461,8 @@ async function loadCurriculum() {
     }
 
     renderCreditSummary(
-      importedValidation?.summary ?? null
+      importedValidation?.summary ?? null,
+      importedValidation
     );
 
     validationResult.textContent = isAdmissionSupported()
@@ -854,22 +863,58 @@ function renderPlan() {
   }
 }
 
-// 서버가 계산한 학점 결과 표시
-function renderCreditSummary(summary) {
-  // 미지원 상태에서는 검증 API의 학점 결과를 표시하지 않습니다.
-  if (!isAdmissionSupported()) {
+// 서버 검증 결과로 학점 카드와 졸업요건 진행 현황 갱신
+function renderCreditSummary(summary, validation = null) {
+  const supported = isAdmissionSupported();
+
+  // 미지원 입학년도에서는 검증 결과를 표시하지 않습니다.
+  if (!supported) {
     summary = null;
   }
 
   const fields = {
-    "earned-credits": summary?.earnedTotalCredits ?? 0,
-    "in-progress-credits": summary?.inProgressCredits ?? 0,
-    "planned-credits": summary?.plannedCredits ?? 0,
-    "projected-credits": summary?.projectedTotalCredits ?? 0,
+    'earned-credits': summary?.earnedTotalCredits ?? 0,
+    'in-progress-credits': summary?.inProgressCredits ?? 0,
+    'planned-credits': summary?.plannedCredits ?? 0,
+    'projected-credits': summary?.projectedTotalCredits ?? 0,
   };
 
   for (const [id, value] of Object.entries(fields)) {
     document.getElementById(id).textContent = value;
+  }
+
+  if (!supported) {
+    renderDegreeProgressView(
+      null,
+      '지원되는 입학년도를 확인한 뒤 진행 현황을 이용할 수 있습니다.'
+    );
+    return;
+  }
+
+  // 검증 결과가 없다면 이전 진행률을 제거합니다.
+  if (!validation || !currentPlan || !currentCurriculum) {
+    renderDegreeProgressView(null);
+    return;
+  }
+
+  try {
+    const progress = buildDegreeProgress(
+      validation,
+      currentPlan,
+      currentCurriculum
+    );
+
+    renderDegreeProgressView(progress);
+  } catch (error) {
+    console.error(
+      '[maker] 졸업요건 진행 현황 표시 실패:',
+      error
+    );
+
+    renderDegreeProgressView(
+      null,
+      '진행 현황을 표시하지 못했습니다. 이수요건을 다시 검사해주세요.'
+    );
   }
 }
 
@@ -988,7 +1033,7 @@ courseForm.addEventListener("submit", async event => {
     currentPlan = nextPlan;
 
     renderPlan();
-    renderCreditSummary(result.summary);
+    renderCreditSummary(result.summary, result);
 
     renderValidationResult(result);
 
@@ -1068,7 +1113,7 @@ async function removePlannedCourse(termId, courseId) {
 
   // 화면과 학점 갱신
   renderPlan();
-  renderCreditSummary(result.summary);
+  renderCreditSummary(result.summary, result);
 
   renderValidationResult(result);
 
@@ -1166,7 +1211,7 @@ async function movePlannedCourse(fromTermId, toTermId, courseId) {
 
   // 화면 갱신
   renderPlan();
-  renderCreditSummary(result.summary);
+  renderCreditSummary(result.summary, result);
 
   renderValidationResult(result);
 
@@ -1269,7 +1314,7 @@ applyCreditsButton.addEventListener("click", async () => {
     currentPlan = nextPlan;
 
     // 학점 현황 갱신
-    renderCreditSummary(result.summary);
+    renderCreditSummary(result.summary, result);
 
     // 기존 검증 결과 무효화
     renderValidationResult(result);
@@ -1436,6 +1481,10 @@ validateButton.addEventListener("click", async () => {
 
   validateButton.disabled = true;
   validationResult.textContent = "이수요건 검사 중...";
+  renderDegreeProgressView(
+    null,
+    '이수요건을 검사하고 있습니다.'
+  );
 
   try {
     const response = await fetch("/api/validate", {
@@ -1462,12 +1511,17 @@ validateButton.addEventListener("click", async () => {
 
     // 검증 결과와 학점 현황 표시
     renderValidationResult(result);
-    renderCreditSummary(result.summary);
+    renderCreditSummary(result.summary, result);
 
   } catch (error) {
     if (isCurrentMakerRequest(requestScope)) {
       validationResult.textContent =
         `검증 오류: ${error.message}`;
+
+      renderDegreeProgressView(
+        null,
+        '이수요건 검증에 실패했습니다. 다시 시도해주세요.'
+      );
     }
   } finally {
     validateButton.disabled =
@@ -1547,7 +1601,7 @@ async function removeRecordedCourse(status, courseId) {
 
   // 과목 목록, 학점, 이수요건 결과 갱신
   renderPlan();
-  renderCreditSummary(result.summary);
+  renderCreditSummary(result.summary, result);
   renderValidationResult(result);
 
   showFeedback(`${courseName} 과목이 삭제되었습니다.`);
