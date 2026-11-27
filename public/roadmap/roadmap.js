@@ -369,16 +369,16 @@ function renderDetail() {
       <h2>${escapeHtml(course.name)}</h2>
       <button type="button" class="button button--quiet course-detail__clear" data-action="clear">닫기</button>
     </header>
-    <dl class="course-detail__facts">
-      <div><dt>학점</dt><dd>${escapeHtml(course.credits)}학점</dd></div>
-      <div><dt>권장 학기</dt><dd>${escapeHtml(course.recommendedTerm ?? '확인 필요')}</dd></div>
-      <div><dt>개설 학기</dt><dd>${offered}</dd></div>
-      <div><dt>진로 트랙</dt><dd>${tags}</dd></div>
+    <p class="course-detail__meta">
+      ${escapeHtml(course.credits)}학점 · 권장 학기 ${escapeHtml(course.recommendedTerm ?? '확인 필요')} · 개설 ${offered}
+    </p>
+    <p class="course-detail__tracks">진로 트랙 · ${tags}</p>
+    <dl class="course-detail__relations">
+      <dt>필수 선수</dt><dd>${hardHtml}</dd>
+      <dt>권장 선행</dt><dd>${courseList(course.recommendedPreviousIds, '없음')}</dd>
+      <dt>함께 듣기</dt><dd>${courseList(course.linkedCourseIds, '없음')}</dd>
+      <dt>바로 다음</dt><dd>${courseList(directNext, '없음')}</dd>
     </dl>
-    <section><h3>필수 선수 과목</h3>${hardHtml}</section>
-    <section><h3>권장 선행 과목</h3>${courseList(course.recommendedPreviousIds, '없음')}</section>
-    <section><h3>함께 들으면 좋은 과목</h3>${courseList(course.linkedCourseIds, '없음')}</section>
-    <section><h3>바로 이어지는 과목</h3>${courseList(directNext, '없음')}</section>
     <p class="course-detail__summary">
       먼저 거쳐야 하는 과목 <strong>${prerequisites.courses.length}</strong>개 ·
       이어서 들을 수 있는 과목 <strong>${followUps.courses.length}</strong>개
@@ -391,6 +391,8 @@ function renderDetail() {
 // ---- 과목 정보 팝업 ----
 // 열기: 자리를 정한 뒤 살짝 아래에서 떠오르며 나타남 / 다른 과목 선택: 새 자리로 부드럽게 이동 / 닫기: 흐려지며 사라짐
 const POPUP_MS = 200; // roadmap.css의 --popup-duration과 같은 값
+// 팝업 폭 후보 (px). 넓은 것부터 시도
+const POPUP_WIDTHS = [340, 280, 240, 200];
 const POPUP_MOVE_MS = 260; // roadmap.css의 팝업 left/top 이동 시간과 같은 값
 let closeTimer;
 
@@ -484,22 +486,45 @@ function placeDetail() {
     x: center.x + scroller.offsetLeft + scroller.clientLeft - scroller.scrollLeft,
     y: center.y + scroller.offsetTop + scroller.clientTop - scroller.scrollTop,
   };
-  // 로드맵이 세로로 길어 페이지를 스크롤하므로, 지금 화면에 보이는 높이 안에서만 자리를 고릅니다.
-  // (안 그러면 화면 밖 먼 곳의 빈 자리에 떠서 팝업이 안 보임)
+  // 로드맵이 세로로 길어 페이지를 스크롤합니다. 팝업은 "고른 과목과 함께 한 화면에 들어오는 높이" 안에서 자리를 고르고,
+  // 그중 강조된 선을 가리지 않는 곳 → 지금 화면에 다 보이는 곳 → 과목에 가까운 곳 순서로 고릅니다.
   const stageTop = elements.stage.getBoundingClientRect().top;
   const topbar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-height')) || 0;
-  const minTop = Math.max(scroller.offsetTop + 12, topbar + 12 - stageTop);
-  const maxTop = Math.max(minTop, window.innerHeight - 12 - stageTop - detail.offsetHeight);
-  const { left, top } = choosePopupPosition({
-    area: { width: elements.stage.clientWidth, height: scroller.offsetTop + scroller.offsetHeight },
-    popup: { width: detail.offsetWidth, height: detail.offsetHeight },
-    obstacles: protectedBoxes(),
-    anchor,
-    minTop,
-    maxTop,
-  });
+  const view = { top: topbar + 12 - stageTop, bottom: window.innerHeight - 12 - stageTop };
+  const usable = view.bottom - view.top;
+  const nodeBox = node.renderedBoundingBox({ includeLabels: false });
+  const nodeTop = nodeBox.y1 + anchor.y - center.y;
+  const nodeBottom = nodeBox.y2 + anchor.y - center.y;
+  const area = { width: elements.stage.clientWidth, height: scroller.offsetTop + scroller.offsetHeight };
+  const obstacles = protectedBoxes();
+
+  // 넓은 팝업부터 시도하고, 선을 가리면 폭을 줄여 학년 섹션 한 칸 안에 들어가게 해 봅니다.
+  let best = null;
+  for (const width of POPUP_WIDTHS) {
+    detail.style.width = `${Math.min(width, area.width - 24)}px`; // 아주 좁은 화면에서는 창 너비에 맞춤
+    const height = detail.offsetHeight;
+    let minTop = Math.max(scroller.offsetTop + 12, nodeBottom - usable);
+    let maxTop = Math.min(area.height - height, nodeTop + usable - height);
+    if (maxTop < minTop) {
+      // 팝업이 화면보다 커서 함께 못 들어가면 지금 화면 안에서만
+      minTop = Math.max(scroller.offsetTop + 12, view.top);
+      maxTop = Math.max(minTop, view.bottom - height);
+    }
+    const position = choosePopupPosition({ area, popup: { width: detail.offsetWidth, height }, obstacles, anchor, minTop, maxTop, view });
+    if (!best || position.overlap < best.overlap) best = { ...position, width, height };
+    if (position.overlap === 0) break;
+  }
+  const { left, top, width, height } = best;
+  detail.style.width = `${Math.min(width, area.width - 24)}px`;
   detail.style.left = `${left}px`;
   detail.style.top = `${top}px`;
+  revealPopup(top, height, view);
+}
+
+// 고른 자리가 화면 위·아래로 조금 벗어나면, 팝업이 다 보일 만큼만 페이지를 스크롤합니다. (고른 과목도 같이 보이는 범위에서 고름)
+function revealPopup(top, height, view) {
+  const shift = top < view.top ? top - view.top : Math.max(0, top + height - view.bottom);
+  if (shift !== 0) window.scrollBy({ top: shift, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
 }
 
 // reveal: 과목 정보 팝업에서 고른 과목이 보이는 영역 밖에 있으면 가로 스크롤을 옮겨 가운데에 보여 줍니다.

@@ -2,7 +2,8 @@
 //
 // 로드맵 창 위에 일정 간격으로 후보 자리를 놓고, 각 자리에 대해
 //   1순위: 가리면 안 되는 것(선택 과목·관련 과목·강조된 화살표·범례)과 겹치는 넓이가 가장 작은 곳
-//   2순위: 선택한 과목에 가장 가까운 곳 (눈을 멀리 옮기지 않도록)
+//   2순위: 지금 화면(view)에 다 보이는 곳 (스크롤이 덜 필요한 곳)
+//   3순위: 선택한 과목에 가장 가까운 곳 (눈을 멀리 옮기지 않도록)
 // 을 고릅니다. 팝업은 로드맵 창 아래로 넘어가도 되므로, 창 아래쪽 바깥은 빈 공간으로 봅니다.
 
 const STEP = 16; // 후보 자리 간격
@@ -18,9 +19,10 @@ const MIN_VISIBLE = 140; // 팝업이 로드맵 창 안에 최소한 보여야 �
  * - minTop: 팝업 윗변이 내려와야 하는 최소 위치 (기본 MARGIN)
  * - maxTop: 팝업 윗변의 최대 위치. 주면 이 범위(지금 화면에 보이는 부분) 안에서만 고르고,
  *   빈 자리가 없으면 아래로 보내지 않고 가장 덜 가리는 자리를 씁니다.
+ * - view: 지금 화면에 보이는 높이 { top, bottom } (선택). 주면 화면 밖으로 나가는 높이가 적은 곳을 먼저 고릅니다.
  * 반환: { left, top, overlap } (overlap: 가린 넓이, 0이면 아무것도 안 가림)
  */
-export function choosePopupPosition({ area, popup, obstacles, anchor, minTop = MARGIN, maxTop: visibleMaxTop }) {
+export function choosePopupPosition({ area, popup, obstacles, anchor, minTop = MARGIN, maxTop: visibleMaxTop, view }) {
   const maxLeft = Math.max(MARGIN, area.width - popup.width - MARGIN);
   const maxTop = Math.max(minTop, visibleMaxTop ?? area.height - MIN_VISIBLE);
 
@@ -30,9 +32,8 @@ export function choosePopupPosition({ area, popup, obstacles, anchor, minTop = M
       const rect = { x1: left, y1: top, x2: left + popup.width, y2: top + popup.height };
       const overlap = obstacles.reduce((sum, box) => sum + overlapArea(rect, box) * (box.weight ?? 1), 0);
       const distance = distanceToRect(anchor, rect);
-      if (!best || overlap < best.overlap || (overlap === best.overlap && distance < best.distance)) {
-        best = { left, top, overlap, distance };
-      }
+      const offscreen = view ? Math.max(0, view.top - rect.y1) + Math.max(0, rect.y2 - view.bottom) : 0;
+      if (!best || isBetter({ overlap, offscreen, distance }, best)) best = { left, top, overlap, offscreen, distance };
     }
   }
   if (best.overlap === 0 || visibleMaxTop !== undefined) return { left: best.left, top: best.top, overlap: best.overlap };
@@ -40,6 +41,12 @@ export function choosePopupPosition({ area, popup, obstacles, anchor, minTop = M
   // 어디에 놓아도 경로를 가리면(경로가 창 전체에 퍼진 경우) 로드맵 창 바로 아래에 띄웁니다. (창 밖으로 나가도 됨)
   const left = Math.min(maxLeft, Math.max(MARGIN, anchor.x - popup.width / 2));
   return { left, top: area.height + MARGIN, overlap: 0 };
+}
+
+function isBetter(a, b) {
+  if (a.overlap !== b.overlap) return a.overlap < b.overlap;
+  if (a.offscreen !== b.offscreen) return a.offscreen < b.offscreen;
+  return a.distance < b.distance;
 }
 
 export function overlapArea(a, b) {

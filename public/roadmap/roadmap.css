@@ -144,11 +144,11 @@
     top 260ms ease-in-out;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  width: min(400px, calc(100% - var(--space-8)));
+  gap: var(--space-3);
+  width: min(340px, calc(100% - var(--space-8))); /* 작게 만들어 강조된 선을 피할 빈 자리가 많아지게 */
   max-height: calc(100vh - var(--topbar-height) - var(--space-6)); /* 화면보다 길면 팝업 안에서 스크롤 */
   overflow-y: auto;
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-line);
   border-top: 3px solid var(--color-accent);
   border-radius: var(--radius-md);
@@ -203,27 +203,36 @@
   font-size: 13px;
 }
 
-.course-detail__facts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2) var(--space-4);
+/* 학점·권장 학기·개설 학기를 한 줄로 */
+.course-detail__meta,
+.course-detail__tracks {
   margin: 0;
 }
 
-.course-detail__facts dt {
+.course-detail__tracks {
+  margin-top: calc(-1 * var(--space-2));
   font-size: 13px;
   color: var(--color-ink-muted);
 }
 
-.course-detail__facts dd {
+/* 선후수 관계: 왼쪽 이름, 오른쪽 과목 버튼 */
+.course-detail__relations {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
   margin: 0;
 }
 
-.course-detail section h3 {
-  margin: 0 0 var(--space-1);
+.course-detail__relations dt {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+
+.course-detail__relations dd {
+  margin: 0;
 }
 
 .course-detail__list {

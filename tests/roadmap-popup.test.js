@@ -27,6 +27,16 @@ describe('choosePopupPosition', () => {
     for (const box of obstacles) assert.equal(overlapArea(rectOf(position), box), 0);
   });
 
+  test('둘 다 안 가리면 지금 화면(view)에 다 보이는 자리를 먼 자리보다 먼저 고른다', () => {
+    const tall = { width: 1200, height: 3000 };
+    const view = { top: 1000, bottom: 1600 };
+    // 고른 과목(1100 부근) 바로 위쪽은 화면 밖, 화면 안 오른쪽은 비어 있음
+    const obstacles = [{ x1: 0, y1: 1050, x2: 500, y2: 1150 }];
+    const position = choosePopupPosition({ area: tall, popup, obstacles, anchor: { x: 250, y: 1100 }, minTop: 500, maxTop: 1500, view });
+    assert.equal(position.overlap, 0);
+    assert.ok(position.top >= view.top && position.top + popup.height <= view.bottom, JSON.stringify(position));
+  });
+
   test('어딘가 가려야 하면 무게가 큰 상자(고른 과목)는 피한다', () => {
     const obstacles = [
       { x1: 0, y1: 0, x2: 1200, y2: 700 }, // 창 전체에 퍼진 경로
