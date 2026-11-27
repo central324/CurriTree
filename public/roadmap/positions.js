@@ -1,29 +1,34 @@
 // 로드맵 그래프에서 과목 노드를 어디에 둘지 계산합니다. (화면과 분리된 순수 함수)
 //
-// 가로: 학년 묶음(1~4학년) 안에 1학기·2학기 칸, 세로: 칸 안에서 데이터 순서대로
-//   - recommendedTerm "2-1"  → 2학년 1학기 칸
-//   - recommendedTerm "1"    → 1학년 묶음의 두 칸 가운데 (학기 무관 과목), 학기 과목들 아래
-//   - recommendedTerm null   → 맨 오른쪽 "학기 미정" 묶음
+// 화면 전체를 학년별 4개 섹션(가로 4칸)으로 나눕니다.
+//   ┌ 1학년 ┬ 2학년 ┬ 3학년 ┬ 4학년 ┐
+//   │ 1학기 │ 1학기 │ 1학기 │ 1학기 │   ← 학기 제목 높이는 모든 학년이 같음
+//   │ [과목]│ [과목]│ [과목]│ [과목]│   ← 행 높이도 모든 학년이 같아서, 학년을 건너뛰는 화살표가
+//   │ 2학기 │ 2학기 │ 2학기 │ 2학기 │     과목 사이 틈(가로 통로)으로 지나갈 수 있음
+//   │ [과목]│ [과목]│ [과목]│ [과목]│
+//   └───────┴───────┴───────┴───────┘
+//   - recommendedTerm "2-1"  → 2학년 섹션의 1학기
+//   - recommendedTerm "1"    → 1학년 섹션의 1학기 과목들 아래 (학기 미지정 표시)
+//   - recommendedTerm null   → 맨 오른쪽 "학기 미정" 섹션
 
-// 기본 크기. 화면이 넓으면 화면 쪽에서 nodeWidth·columnWidth·yearGap을 늘려 넘깁니다(computePositions의 dims).
+// 기본 크기. 화면 쪽에서 화면 너비에 맞춰 nodeWidth·columnWidth를 정해 넘깁니다(computePositions의 dims).
 export const NODE_WIDTH = 200;
 export const NODE_HEIGHT = 52;
-export const COLUMN_WIDTH = 272; // 같은 학년 안 학기 칸 사이 거리 (과목 사이 빈칸 72px에 화살표 여러 개가 나란히 지나감)
-export const YEAR_GAP = 52; // 학년 묶음 사이 추가 거리
-export const ROW_HEIGHT = 86; // 행 사이 틈 34px에 가로 화살표 여러 개가 나란히 지나감
+export const COLUMN_WIDTH = 272; // 학년 섹션 사이 거리 (과목 사이 빈칸 72px에 화살표 여러 개가 나란히 지나감)
+export const ROW_HEIGHT = 80; // 행 사이 틈 28px에 가로 화살표가 지나감
 export const HEADER_OFFSET = 74; // 학기 제목과 첫 과목 사이 거리 (첫 행 위에도 가로 통로가 생기도록)
+export const SEMESTER_GAP = 16; // 1학기 마지막 과목과 2학기 제목 사이 추가 거리
 
 export const DEFAULT_DIMS = {
   nodeWidth: NODE_WIDTH,
   nodeHeight: NODE_HEIGHT,
   columnWidth: COLUMN_WIDTH,
-  yearGap: YEAR_GAP,
   rowHeight: ROW_HEIGHT,
   headerOffset: HEADER_OFFSET,
+  semesterGap: SEMESTER_GAP,
 };
 
 const YEARS = [1, 2, 3, 4];
-const SEMESTERS = [1, 2];
 const TERM_FORMAT = /^([1-4])(?:-([12]))?$/;
 
 function parseTerm(course) {
@@ -33,19 +38,25 @@ function parseTerm(course) {
   return { year: Number(match[1]), semester: match[2] ? Number(match[2]) : null };
 }
 
+// 섹션(칸) 수: 과목이 있는 학년 수 + 학기 미정 과목이 있으면 1
+export function countColumns(courses) {
+  const keys = new Set(courses.map((course) => parseTerm(course).year));
+  return keys.size;
+}
+
 /**
  * 반환
- * - courses: Map<courseId, { x, y, year }>  (year: 1~4, 학기 미정이면 null)
- * - years: [{ id, label, year }]            학년 묶음 (과목이 있는 학년만, 학기 미정은 마지막)
- * - headers: [{ id, label, year, x, y }]    학기 칸 제목
+ * - courses: Map<courseId, { x, y, year, wholeYear }>  (year: 1~4, 학기 미정이면 null / wholeYear: 학년만 정해진 과목)
+ * - years: [{ id, label, year, x }]                   학년 섹션 (과목이 있는 학년만, 학기 미정은 마지막)
+ * - headers: [{ id, label, year, x, y }]              학기 제목
+ * - columns: 섹션 가운데 x 목록, lastRowY: 맨 아래 행 y (섹션 높이를 맞출 때 씀)
  * - width, height: 과목 상자 바깥 기준 전체 크기
  * - dims: 배치에 쓴 크기 (routeEdges가 같은 값을 씀)
  * dims: DEFAULT_DIMS 중 바꿀 값만 넘깁니다.
  */
 export function computePositions(courses, dimsOverride = {}) {
   const dims = { ...DEFAULT_DIMS, ...dimsOverride };
-  const { nodeWidth: NODE_WIDTH, nodeHeight: NODE_HEIGHT, columnWidth: COLUMN_WIDTH, yearGap: YEAR_GAP } = dims;
-  const { rowHeight: ROW_HEIGHT, headerOffset: HEADER_OFFSET } = dims;
+  const { nodeWidth, nodeHeight, columnWidth, rowHeight, headerOffset, semesterGap } = dims;
   const groups = new Map(); // year → { 1: [], 2: [], whole: [] }
   const unknown = [];
 
@@ -59,51 +70,51 @@ export function computePositions(courses, dimsOverride = {}) {
     groups.get(year)[semester ?? 'whole'].push(course.id);
   }
 
+  const presentYears = YEARS.filter((year) => groups.has(year));
+  // 1학기 영역 행 수는 모든 학년 중 가장 많은 수로 맞춤 → 2학기 제목이 모든 학년에서 같은 높이
+  const firstRows = Math.max(1, unknown.length, ...presentYears.map((year) => groups.get(year)[1].length + groups.get(year).whole.length));
+  const secondHeaderY = headerOffset + firstRows * rowHeight + semesterGap;
+  const firstRowY = (row) => headerOffset + row * rowHeight;
+  const secondRowY = (row) => secondHeaderY + headerOffset + row * rowHeight;
+
   const positions = new Map();
   const years = [];
   const headers = [];
-  let left = 0;
-  let maxRows = 0;
+  let lastRowY = firstRowY(0);
+  let column = 0;
 
-  for (const year of YEARS) {
+  for (const year of presentYears) {
     const group = groups.get(year);
-    if (!group) continue;
+    const x = column * columnWidth;
+    years.push({ id: `year:${year}`, label: `${year}학년`, year, x });
+    headers.push({ id: `term:${year}-1`, label: '1학기', year, x, y: 0 });
+    headers.push({ id: `term:${year}-2`, label: '2학기', year, x, y: secondHeaderY });
 
-    years.push({ id: `year:${year}`, label: `${year}학년`, year });
-    for (const semester of SEMESTERS) {
-      const x = left + (semester - 1) * COLUMN_WIDTH;
-      headers.push({ id: `term:${year}-${semester}`, label: `${semester}학기`, year, x, y: 0 });
-      group[semester].forEach((id, row) => positions.set(id, { x, y: HEADER_OFFSET + row * ROW_HEIGHT, year }));
-    }
-
-    const firstWholeRow = Math.max(group[1].length, group[2].length);
-    group.whole.forEach((id, index) => {
-      positions.set(id, {
-        x: left + COLUMN_WIDTH / 2,
-        y: HEADER_OFFSET + (firstWholeRow + index) * ROW_HEIGHT,
-        year,
-      });
+    [...group[1], ...group.whole].forEach((id, row) => {
+      positions.set(id, { x, y: firstRowY(row), year, wholeYear: row >= group[1].length });
     });
-
-    maxRows = Math.max(maxRows, firstWholeRow + group.whole.length);
-    left += 2 * COLUMN_WIDTH + YEAR_GAP;
+    group[2].forEach((id, row) => positions.set(id, { x, y: secondRowY(row), year, wholeYear: false }));
+    if (group[2].length > 0) lastRowY = Math.max(lastRowY, secondRowY(group[2].length - 1));
+    column += 1;
   }
 
   if (unknown.length > 0) {
-    years.push({ id: 'year:none', label: '학기 미정', year: null });
-    headers.push({ id: 'term:none', label: '확인 필요', year: null, x: left, y: 0 });
-    unknown.forEach((id, row) => positions.set(id, { x: left, y: HEADER_OFFSET + row * ROW_HEIGHT, year: null }));
-    maxRows = Math.max(maxRows, unknown.length);
-    left += COLUMN_WIDTH + YEAR_GAP;
+    const x = column * columnWidth;
+    years.push({ id: 'year:none', label: '학기 미정', year: null, x });
+    headers.push({ id: 'term:none', label: '확인 필요', year: null, x, y: 0 });
+    unknown.forEach((id, row) => positions.set(id, { x, y: firstRowY(row), year: null, wholeYear: false }));
+    column += 1;
   }
+  lastRowY = Math.max(lastRowY, ...[...positions.values()].map((position) => position.y));
 
   return {
     courses: positions,
     years,
     headers,
-    columns: headers.map((header) => header.x).sort((a, b) => a - b),
-    width: Math.max(0, left - YEAR_GAP - COLUMN_WIDTH + NODE_WIDTH),
-    height: HEADER_OFFSET + Math.max(0, maxRows - 1) * ROW_HEIGHT + NODE_HEIGHT,
+    columns: years.map((year) => year.x),
+    lastRowY,
+    width: Math.max(0, (column - 1) * columnWidth + nodeWidth),
+    height: lastRowY + nodeHeight / 2,
     dims,
   };
 }

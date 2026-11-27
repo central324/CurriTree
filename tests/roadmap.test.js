@@ -1,7 +1,7 @@
 // 전공 로드맵 화면 (public/roadmap/)
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { computePositions, NODE_HEIGHT, NODE_WIDTH, routeEdges } from '../public/roadmap/positions.js';
+import { computePositions, countColumns, NODE_HEIGHT, NODE_WIDTH, routeEdges } from '../public/roadmap/positions.js';
 import { RECOMMENDED_TERM_PATTERN } from '../shared/curriculum/schema.js';
 import { createApp } from '../server/app.js';
 import { loadRealCurriculum, makeCourse } from './helpers/curriculum.js';
@@ -32,7 +32,7 @@ describe('computePositions', () => {
     }
   });
 
-  test('학년별로 묶고, 학년 안에서 1학기 칸 → 2학기 칸 순서로 놓는다', () => {
+  test('학년마다 섹션(칸) 하나: 학년이 오를수록 오른쪽, 섹션 안에서 1학기 과목 위 → 2학기 과목 아래', () => {
     const positions = computePositions([
       makeCourse({ id: 'y2s1', recommendedTerm: '2-1' }),
       makeCourse({ id: 'y1s2', recommendedTerm: '1-2' }),
@@ -40,36 +40,61 @@ describe('computePositions', () => {
       makeCourse({ id: 'y2s1b', recommendedTerm: '2-1' }),
     ]);
     assert.deepEqual(positions.years.map((year) => year.label), ['1학년', '2학년']);
-    assert.ok(at(positions, 'y1s1').x < at(positions, 'y1s2').x);
+    assert.equal(at(positions, 'y1s1').x, at(positions, 'y1s2').x);
+    assert.ok(at(positions, 'y1s1').y < at(positions, 'y1s2').y);
     assert.ok(at(positions, 'y1s2').x < at(positions, 'y2s1').x);
     assert.equal(at(positions, 'y2s1').x, at(positions, 'y2s1b').x);
     assert.ok(at(positions, 'y2s1').y < at(positions, 'y2s1b').y);
     assert.equal(at(positions, 'y1s1').year, 1);
   });
 
-  test('학기를 정하지 않은 학년 과목("1")은 그 학년 두 칸 가운데, 학기 과목들 아래에 놓는다', () => {
+  test('학기 제목과 행 높이는 모든 학년이 같다 (2학기 제목은 1학기 과목이 가장 많은 학년 기준)', () => {
+    const positions = computePositions([
+      makeCourse({ id: 'a1', recommendedTerm: '1-1' }),
+      makeCourse({ id: 'b1', recommendedTerm: '2-1' }),
+      makeCourse({ id: 'b2', recommendedTerm: '2-1' }),
+      makeCourse({ id: 'b3', recommendedTerm: '2-1' }),
+      makeCourse({ id: 'a2', recommendedTerm: '1-2' }),
+      makeCourse({ id: 'b4', recommendedTerm: '2-2' }),
+    ]);
+    const second = positions.headers.filter((header) => header.label === '2학기');
+    assert.equal(second.length, 2);
+    assert.equal(second[0].y, second[1].y);
+    assert.ok(second[0].y > at(positions, 'b3').y);
+    assert.equal(at(positions, 'a2').y, at(positions, 'b4').y);
+    assert.equal(positions.lastRowY, at(positions, 'a2').y);
+  });
+
+  test('학기를 정하지 않은 학년 과목("1")은 그 학년 섹션의 1학기 과목들 아래, 학기 미지정 표시', () => {
     const positions = computePositions([
       makeCourse({ id: 's1', recommendedTerm: '1-1' }),
       makeCourse({ id: 's2', recommendedTerm: '1-2' }),
       makeCourse({ id: 'whole', recommendedTerm: '1' }),
     ]);
     const whole = at(positions, 'whole');
-    assert.equal(whole.x, (at(positions, 's1').x + at(positions, 's2').x) / 2);
-    assert.ok(whole.y > at(positions, 's1').y);
+    assert.equal(whole.x, at(positions, 's1').x);
+    assert.ok(whole.y > at(positions, 's1').y && whole.y < at(positions, 's2').y);
+    assert.equal(whole.wholeYear, true);
+    assert.equal(at(positions, 's1').wholeYear, false);
     assert.equal(whole.year, 1);
   });
 
-  test('실제 데이터: 공학설계입문은 1학년 묶음에 들어간다', () => {
-    const positions = computePositions(loadRealCurriculum().courses);
+  test('실제 데이터: 학년 섹션 4개, 공학설계입문은 1학년 섹션에 들어간다', () => {
+    const { courses } = loadRealCurriculum();
+    const positions = computePositions(courses);
+    assert.equal(countColumns(courses), 4);
+    assert.deepEqual(positions.years.map((year) => year.label), ['1학년', '2학년', '3학년', '4학년']);
     assert.equal(at(positions, 'eng-design-intro').year, 1);
   });
 
-  test('과목이 없는 학년은 빼고, 권장 학기가 null인 과목은 맨 오른쪽 "학기 미정" 묶음', () => {
-    const positions = computePositions([
+  test('과목이 없는 학년은 빼고, 권장 학기가 null인 과목은 맨 오른쪽 "학기 미정" 섹션', () => {
+    const courses = [
       makeCourse({ id: 'a', recommendedTerm: null }),
       makeCourse({ id: 'b', recommendedTerm: '3-2' }),
-    ]);
+    ];
+    const positions = computePositions(courses);
     assert.deepEqual(positions.years.map((year) => year.label), ['3학년', '학기 미정']);
+    assert.equal(countColumns(courses), 2);
     assert.ok(at(positions, 'a').x > at(positions, 'b').x);
     assert.equal(at(positions, 'a').year, null);
   });
@@ -153,11 +178,11 @@ describe('routeEdges (화살표 길 찾기)', () => {
     }
   });
 
-  test('넓은 화면에 맞춰 상자·간격을 늘려도 겹침·대각선이 없다', () => {
+  test('화면 너비에 맞춰 상자·간격을 바꿔도(좁은·넓은 화면) 겹침·대각선이 없다', () => {
     const { courses } = loadRealCurriculum();
     for (const dims of [
-      { nodeWidth: 230, columnWidth: 380, yearGap: 120 },
-      { nodeWidth: 250, columnWidth: 430, yearGap: 130 },
+      { nodeWidth: 150, columnWidth: 222 },
+      { nodeWidth: 300, columnWidth: 460 },
     ]) {
       const { segments, layout } = segmentsOf(courses, dims);
       assert.equal(layout.dims.nodeWidth, dims.nodeWidth);
@@ -192,8 +217,8 @@ describe('routeEdges (화살표 길 찾기)', () => {
     const courses = [
       makeCourse({ id: 'a', recommendedTerm: '1-1' }),
       makeCourse({ id: 'b', recommendedTerm: '1-1' }),
-      makeCourse({ id: 'mid', recommendedTerm: '1-2' }),
-      makeCourse({ id: 'c', recommendedTerm: '2-1', recommendedPreviousIds: ['a', 'b'] }),
+      makeCourse({ id: 'mid', recommendedTerm: '2-1' }),
+      makeCourse({ id: 'c', recommendedTerm: '3-1', recommendedPreviousIds: ['a', 'b'] }),
     ];
     const { segments, routes } = segmentsOf(courses);
     assert.deepEqual(overlappingPairs(segments), []);

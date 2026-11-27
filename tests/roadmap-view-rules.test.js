@@ -1,25 +1,39 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { chooseZoom, isEdgeShown, MAX_ZOOM, MIN_READABLE_ZOOM } from '../public/roadmap/view-rules.js';
+import {
+  fitColumns,
+  isEdgeShown,
+  MAX_COLUMN_GAP,
+  MAX_NODE_WIDTH,
+  MIN_COLUMN_GAP,
+  MIN_NODE_WIDTH,
+} from '../public/roadmap/view-rules.js';
 
-describe('로드맵 확대 비율 (chooseZoom)', () => {
-  it('창에 다 들어오면 창 높이에 맞춘 비율을 쓴다', () => {
-    assert.equal(chooseZoom(1000, 1000), 1);
+describe('학년 섹션 크기 (fitColumns)', () => {
+  it('보통 화면(1024px)에서는 학년 4개가 가로 스크롤 없이 화면 너비에 맞는다', () => {
+    const fit = fitColumns(1024 - 48 - 48, 4);
+    assert.ok(fit.width <= 1024 - 48 - 48 + 0.001);
+    assert.ok(fit.nodeWidth >= MIN_NODE_WIDTH);
   });
 
-  it('창이 낮아도 글자가 읽히는 최소 비율 아래로 줄이지 않는다', () => {
-    // 예전에는 1024×768 화면에서 0.52까지 줄어 과목 글자가 약 8px이었음
-    assert.equal(chooseZoom(520, 1000), MIN_READABLE_ZOOM);
+  it('창이 좁으면 과목 상자를 최소 너비 아래로 줄이지 않고 가로 스크롤로 넘긴다', () => {
+    const fit = fitColumns(400, 4);
+    assert.equal(fit.nodeWidth, MIN_NODE_WIDTH);
+    assert.equal(fit.columnWidth, MIN_NODE_WIDTH + MIN_COLUMN_GAP);
+    assert.ok(fit.width > 400);
   });
 
-  it('창이 아주 높아도 최대 비율을 넘지 않는다', () => {
-    assert.equal(chooseZoom(5000, 1000), MAX_ZOOM);
+  it('넓은 화면에서도 과목 상자와 섹션 사이 빈칸은 최대값을 넘지 않는다', () => {
+    const fit = fitColumns(5000, 4);
+    assert.equal(fit.nodeWidth, MAX_NODE_WIDTH);
+    assert.equal(fit.columnWidth, MAX_NODE_WIDTH + MAX_COLUMN_GAP);
   });
 
-  it('그래프 높이가 0이거나 숫자가 아니면 최대 비율을 돌려준다', () => {
-    assert.equal(chooseZoom(500, 0), MAX_ZOOM);
-    assert.equal(chooseZoom(500, Number.NaN), MAX_ZOOM);
+  it('섹션이 1개여도 0으로 나누지 않는다', () => {
+    const fit = fitColumns(800, 1);
+    assert.ok(Number.isFinite(fit.columnWidth));
+    assert.equal(fitColumns(800, 0).nodeWidth, fit.nodeWidth);
   });
 });
 

@@ -2,8 +2,8 @@
 import { buildCourseGraph, findFollowUps, findPrerequisites } from '/shared/curriculum/graph.js';
 import { escapeHtml, formatOfferedTerms } from '/roadmap/html.js';
 import { choosePopupPosition } from '/roadmap/popup-position.js';
-import { computePositions, DEFAULT_DIMS, routeEdges } from '/roadmap/positions.js';
-import { chooseZoom, isEdgeShown } from '/roadmap/view-rules.js';
+import { computePositions, countColumns, routeEdges } from '/roadmap/positions.js';
+import { fitColumns, isEdgeShown, SECTION_PADDING } from '/roadmap/view-rules.js';
 
 const CYTOSCAPE_URL = 'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.mjs';
 const DEPARTMENT_ID = 'ce';
@@ -110,7 +110,7 @@ function graphStyle(color) {
         'background-color': color.bg,
         'border-width': 1,
         'border-color': color.lineSoft,
-        padding: 16,
+        padding: SECTION_PADDING,
         label: 'data(label)',
         color: color.accent,
         'font-family': color.font,
@@ -137,6 +137,11 @@ function graphStyle(color) {
         'text-valign': 'center',
         events: 'no',
       },
+    },
+    {
+      // 학년 섹션 높이를 모두 같게 맞추려고 맨 아래 행에 두는 보이지 않는 점
+      selector: 'node.spacer',
+      style: { width: 'data(w)', height: 1, opacity: 0, events: 'no' },
     },
     {
       // 화살표는 가로·세로 직선으로만. 붙는 곳(포트)과 꺾이는 점은 positions.js의 routeEdges가 정합니다.
@@ -205,12 +210,16 @@ function toSegmentData(source, target, points) {
 function buildElements(curriculum, positions) {
   const parentOf = (year) => (year === null ? 'year:none' : `year:${year}`);
 
-  const nodes = positions.years.map((year) => ({
-    group: 'nodes',
-    classes: 'year',
-    data: { id: year.id, label: year.label },
-    selectable: false,
-  }));
+  const nodes = positions.years.flatMap((year) => [
+    { group: 'nodes', classes: 'year', data: { id: year.id, label: year.label }, selectable: false },
+    {
+      group: 'nodes',
+      classes: 'spacer',
+      data: { id: `${year.id}:spacer`, parent: year.id, w: positions.dims.nodeWidth },
+      position: { x: year.x, y: positions.lastRowY + positions.dims.nodeHeight / 2 },
+      selectable: false,
+    },
+  ]);
 
   for (const header of positions.headers) {
     nodes.push({
@@ -223,13 +232,13 @@ function buildElements(curriculum, positions) {
   }
 
   for (const course of curriculum.courses) {
-    const { x, y, year } = positions.courses.get(course.id);
+    const { x, y, year, wholeYear } = positions.courses.get(course.id);
     nodes.push({
       group: 'nodes',
       classes: 'course',
       data: {
         id: course.id,
-        label: course.name,
+        label: wholeYear ? `${course.name}\n(학기 미지정)` : course.name,
         category: course.category,
         parent: parentOf(year),
         w: positions.dims.nodeWidth,
@@ -255,7 +264,8 @@ function buildElements(curriculum, positions) {
     const target = positions.courses.get(targetId);
     return {
       group: 'edges',
-      classes: points.length === 0 ? 'straight' : 'bent',
+      // 처음부터 숨길 선은 숨긴 채로 추가 (보였다가 사라지는 전환이 생기지 않게)
+      classes: `${points.length === 0 ? 'straight' : 'bent'}${isEdgeShown(relation, false) ? '' : ' is-hidden'}`,
       data: {
         id,
         source: sourceId,
@@ -495,9 +505,15 @@ function select(courseId, { reveal = false } = {}) {
     const box = state.cy.getElementById(state.selectedId).renderedBoundingBox();
     const outside = box.x1 < scroller.scrollLeft || box.x2 > scroller.scrollLeft + scroller.clientWidth;
     if (outside) scrollGraphTo((box.x1 + box.x2) / 2 - scroller.clientWidth / 2);
-    // 위아래로도 창 밖이면 가운데로 (그래프가 창보다 높을 때)
-    const outsideY = box.y1 < scroller.scrollTop || box.y2 > scroller.scrollTop + scroller.clientHeight;
-    if (outsideY) scroller.scrollTop = (box.y1 + box.y2) / 2 - scroller.clientHeight / 2;
+    // 위아래로 화면 밖이면 페이지를 스크롤해 가운데로
+    const top = scroller.getBoundingClientRect().top + box.y1;
+    const bottom = scroller.getBoundingClientRect().top + box.y2;
+    if (top < 0 || bottom > window.innerHeight) {
+      window.scrollTo({
+        top: window.scrollY + (top + bottom) / 2 - window.innerHeight / 2,
+        behavior: reducedMotion.matches ? 'auto' : 'smooth',
+      });
+    }
   }
 }
 
@@ -547,26 +563,6 @@ function bindEvents() {
     if (event.target.closest('[data-action="clear"]')) select(null);
   });
 
-  // 그래프 위의 휠·터치패드 입력:
-  // - 그래프가 창 높이에 다 들어오면: 모두 "로드맵 가로 이동"으로 씀 (좌우로 움직이다 페이지가 같이 움직이는 문제 방지)
-  // - 그래프가 창보다 높으면: 위아래 휠은 원래대로 로드맵 창을 위아래로, 좌우 입력(터치패드·Shift+휠)만 가로 이동
-  // 로드맵이 창에 다 들어와 가로로 움직일 게 없으면 원래대로 스크롤됩니다.
-  elements.scroller.addEventListener(
-    'wheel',
-    (event) => {
-      const { scroller } = elements;
-      if (event.ctrlKey || scroller.scrollWidth <= scroller.clientWidth) return;
-      const horizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY) || event.shiftKey;
-      const tall = scroller.scrollHeight > scroller.clientHeight + 1;
-      if (tall && !horizontal) return;
-      event.preventDefault();
-      const unit = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? scroller.clientWidth : 1; // 줄·페이지 단위 → px
-      const delta = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * unit;
-      scrollGraphTo(smoothScroll.target ?? scroller.scrollLeft, delta);
-    },
-    { passive: false },
-  );
-
   // 가로로 스크롤하면 강조된 경로의 화면 위치가 바뀌므로, 스크롤이 멈추면 팝업 자리를 다시 고릅니다.
   let scrollTimer;
   elements.scroller.addEventListener('scroll', () => {
@@ -578,16 +574,18 @@ function bindEvents() {
     if (event.key === 'Escape' && state.selectedId) select(null);
   });
 
-  // 창 크기를 끌어서 바꾸는 동안에는 기다렸다가, 멈추면 한 번만 다시 그립니다. (매번 다시 그리면 버벅임)
+  // 로드맵 창 너비가 바뀌면 다시 그립니다. 창 크기를 바꿀 때뿐 아니라, 그래프가 길어져 페이지 세로 스크롤바가
+  // 생기면서 너비가 줄어들 때도 해당됩니다. 끌어서 바꾸는 동안에는 기다렸다가, 멈추면 한 번만 다시 그립니다.
   let resizeTimer;
-  window.addEventListener('resize', () => {
+  new ResizeObserver(() => {
+    if (elements.scroller.clientWidth === state.layoutWidth) return; // 높이만 바뀐 경우는 무시
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       layoutGraph();
       paint();
       movePopup();
     }, 150);
-  });
+  }).observe(elements.scroller);
 }
 
 // ---- 로드맵 가로 이동: 목표 위치까지 짧게 미끄러지듯 ----
@@ -668,72 +666,46 @@ function releasePageHeight(delay) {
   }, delay);
 }
 
-// 로드맵 크기 맞추기
-// 1) 높이: 그래프 전체 높이를 로드맵 창 높이에 맞추되, 글자가 작아지지 않게 확대 비율에 하한을 둡니다.
-//    (view-rules.js의 chooseZoom) 창보다 커지면 로드맵 창 안에서 위아래로 스크롤합니다.
-// 2) 넓이: 창이 넓어 공간이 남으면 과목 상자와 칸 사이 간격을 넓혀 창 가로를 채웁니다.
-//    창이 좁으면 기본 크기 그대로 두고 가로 스크롤로 봅니다.
+// 로드맵 크기 맞추기: 화면 전체 너비를 학년 섹션 수(보통 4)로 나눠 씁니다.
+// - 확대·축소 없이 글자 크기 그대로 (확대 비율 1)
+// - 높이는 과목 수만큼 늘어나고 페이지를 위아래로 스크롤해서 봄
+// - 창이 너무 좁으면 섹션을 줄이지 않고 가로 스크롤
 // 사용자가 확대·축소하거나 끌어서 옮기는 기능은 끕니다.
 const GRAPH_PADDING = 24;
-const GRAPH_PADDING_TOP = 72; // 위에 겹쳐 둔 범례 상자 + 학년 제목만큼 띄움
-const MAX_NODE_WIDTH = 250; // 과목 상자를 넓힐 수 있는 최대 너비
-const MAX_GAP_SCALE = 2.5; // 칸 사이 간격을 넓힐 수 있는 최대 배율
-
-function renderLayout(dims) {
-  const layout = computePositions(state.curriculum.courses, dims);
-  state.cy.batch(() => {
-    state.cy.elements().remove();
-    state.cy.add(buildElements(state.curriculum, layout));
-  });
-  return layout;
-}
-
-// 남는 가로 공간(모델 좌표 extra)을 과목 상자 너비 → 칸 사이 간격 순서로 나눠 줍니다.
-function stretchDims(layout, extra) {
-  const { dims, columns } = layout;
-  const gapTotal = columns.slice(1).reduce((sum, x, index) => sum + (x - columns[index] - dims.nodeWidth), 0);
-  const nodeExtra = Math.min(MAX_NODE_WIDTH - dims.nodeWidth, (extra * 0.5) / columns.length);
-  const gapScale = Math.min(MAX_GAP_SCALE, 1 + (extra - nodeExtra * columns.length) / gapTotal);
-  const nodeWidth = dims.nodeWidth + Math.max(0, nodeExtra);
-  return {
-    ...dims,
-    nodeWidth,
-    columnWidth: nodeWidth + (dims.columnWidth - dims.nodeWidth) * gapScale,
-    yearGap: dims.yearGap * gapScale,
-  };
-}
+const GRAPH_PADDING_TOP = 24; // 학년 제목은 섹션 상자 위에 붙으므로 boundingBox에 이미 포함됨
 
 function layoutGraph() {
   const { cy } = state;
   const { scroller, graph } = elements;
+  const courses = state.curriculum.courses;
 
-  // 기본 크기로 그려서 높이 기준 확대 비율을 구함
-  graph.style.width = '100%';
-  graph.style.height = '0px';
-  let layout = renderLayout(DEFAULT_DIMS);
+  const render = (available) => {
+    const fit = fitColumns(available, countColumns(courses));
+    const layout = computePositions(courses, { nodeWidth: fit.nodeWidth, columnWidth: fit.columnWidth });
+    cy.batch(() => {
+      cy.elements().remove();
+      cy.add(buildElements(state.curriculum, layout));
+    });
+    return layout;
+  };
+
+  // 바깥 섹션 옆 통로로 지나가는 화살표만큼 넘치면, 그만큼 줄여 한 번 더 맞춤 (가로 스크롤이 생기지 않게)
+  const available = scroller.clientWidth - GRAPH_PADDING * 2;
+  let layout = render(available);
   let box = cy.elements().boundingBox();
-  const zoomFor = () => chooseZoom(scroller.clientHeight - GRAPH_PADDING_TOP - GRAPH_PADDING, box.h);
-  let zoom = zoomFor();
-
-  // 남는 가로 공간이 있으면 상자·간격을 넓혀 다시 그림
-  const extra = (scroller.clientWidth - GRAPH_PADDING * 2) / zoom - box.w;
-  if (extra > 1) {
-    layout = renderLayout(stretchDims(layout, extra));
+  if (box.w > available + 0.5) {
+    layout = render(available - (box.w - available));
     box = cy.elements().boundingBox();
   }
-
-  // 넓이를 정한 뒤 가로 스크롤바가 생기면 보이는 높이가 줄어드므로 한 번 더 맞춤 (창에 꼭 맞으면 스크롤바 없음)
-  const widthFor = (z) => Math.min(Math.ceil(box.w * z + GRAPH_PADDING * 2), extra > 1 ? scroller.clientWidth : Infinity);
-  graph.style.width = `${widthFor(zoom)}px`;
-  zoom = zoomFor();
-  graph.style.width = `${widthFor(zoom)}px`;
-  // 글자 크기를 지키느라 창보다 높아지면 그만큼 그래프를 길게 두고 위아래 스크롤
-  graph.style.height = `${Math.max(scroller.clientHeight, Math.ceil(box.h * zoom + GRAPH_PADDING_TOP + GRAPH_PADDING))}px`;
+  const width = Math.max(scroller.clientWidth, Math.ceil(box.w + GRAPH_PADDING * 2));
+  graph.style.width = `${width}px`;
+  graph.style.height = `${Math.ceil(box.h + GRAPH_PADDING_TOP + GRAPH_PADDING)}px`;
 
   cy.resize();
-  cy.zoom(zoom);
-  cy.pan({ x: GRAPH_PADDING - box.x1 * zoom, y: GRAPH_PADDING_TOP - box.y1 * zoom });
+  cy.zoom(1);
+  cy.pan({ x: (width - box.w) / 2 - box.x1, y: GRAPH_PADDING_TOP - box.y1 });
   state.layout = layout;
+  state.layoutWidth = scroller.clientWidth;
 }
 
 async function loadCurriculum() {
