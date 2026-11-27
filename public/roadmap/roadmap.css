@@ -128,26 +128,25 @@
   color: var(--color-ink-muted);
 }
 
-/* 과목 정보 칸 자리: 과목이 가장 적은 학년(1학년) 섹션 아래 빈 자리 (위치·크기는 roadmap.js의 placeDock이 정함) */
-.course-dock {
-  position: absolute;
-  z-index: 3;
-}
-
-/* 빈 자리가 없을 때(학년 섹션이 1개)는 그래프 아래에 */
-.course-dock--below {
-  position: static;
-  margin-top: var(--space-4);
-}
-
-/* 과목 정보 칸: 페이지를 내려도 빈 자리 안에서 화면 위쪽에 붙어 따라옴 */
+/* 과목 정보 팝업: 평소엔 숨김. 과목을 고르면 강조된 경로를 가리지 않는 자리에 뜸 (위치는 roadmap.js가 계산, 창 밖으로 나가도 됨)
+   열릴 때 살짝 아래에서 떠오르고, 다른 과목을 고르면 새 자리로 부드럽게 이동 */
 .course-detail {
-  position: sticky;
-  top: calc(var(--topbar-height) + var(--space-3));
+  --popup-duration: 200ms; /* roadmap.js의 POPUP_MS와 같은 값 */
+  position: absolute;
+  left: var(--space-4);
+  z-index: 3;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--popup-duration) ease-out,
+    transform var(--popup-duration) ease-out,
+    left 260ms ease-in-out,
+    top 260ms ease-in-out;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-height: calc(100vh - var(--topbar-height) - var(--space-6));
+  width: min(400px, calc(100% - var(--space-8)));
+  max-height: calc(100vh - var(--topbar-height) - var(--space-6)); /* 화면보다 길면 팝업 안에서 스크롤 */
   overflow-y: auto;
   padding: var(--space-4);
   border: 1px solid var(--color-line);
@@ -157,10 +156,25 @@
   font-size: 14px;
 }
 
-.course-detail__title {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 700;
+.course-detail[hidden] {
+  display: none;
+}
+
+.course-detail.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* 처음 열 때는 자리를 옮기는 애니메이션 없이 바로 그 자리에 놓음 */
+.course-detail.is-placing {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-detail {
+    transform: none;
+    transition: none;
+  }
 }
 
 .course-detail__empty {
@@ -191,7 +205,7 @@
 
 .course-detail__facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); /* 칸이 좁으면(작은 화면) 한 줄에 하나씩 */
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2) var(--space-4);
   margin: 0;
 }
@@ -264,4 +278,8 @@
     padding: var(--space-6) var(--space-4) var(--space-12);
   }
 
+  .course-detail {
+    left: var(--space-2);
+    width: calc(100% - var(--space-4));
+  }
 }

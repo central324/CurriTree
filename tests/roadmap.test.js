@@ -48,57 +48,21 @@ describe('computePositions', () => {
     assert.equal(at(positions, 'y1s1').year, 1);
   });
 
-  // 1학년(과목 2개)이 가장 적고, 2학년(4개)·3학년(3개)은 2학기 제목 높이를 맞춤
-  const sample = () =>
-    computePositions([
+  test('학기 제목과 행 높이는 모든 학년이 같다 (2학기 제목은 1학기 과목이 가장 많은 학년 기준)', () => {
+    const positions = computePositions([
       makeCourse({ id: 'a1', recommendedTerm: '1-1' }),
-      makeCourse({ id: 'a2', recommendedTerm: '1-2' }),
       makeCourse({ id: 'b1', recommendedTerm: '2-1' }),
       makeCourse({ id: 'b2', recommendedTerm: '2-1' }),
       makeCourse({ id: 'b3', recommendedTerm: '2-1' }),
+      makeCourse({ id: 'a2', recommendedTerm: '1-2' }),
       makeCourse({ id: 'b4', recommendedTerm: '2-2' }),
-      makeCourse({ id: 'c1', recommendedTerm: '3-1' }),
-      makeCourse({ id: 'c2', recommendedTerm: '3-2' }),
-      makeCourse({ id: 'c3', recommendedTerm: '3-2' }),
     ]);
-  const secondHeader = (positions, year) => positions.headers.find((header) => header.id === `term:${year}-2`);
-
-  test('2학기 제목과 행 높이는 학년끼리 같다 (1학기 과목이 가장 많은 학년 기준)', () => {
-    const positions = sample();
-    assert.equal(secondHeader(positions, 2).y, secondHeader(positions, 3).y);
-    assert.ok(secondHeader(positions, 2).y > at(positions, 'b3').y);
-    assert.equal(at(positions, 'b4').y, at(positions, 'c2').y);
-    assert.equal(positions.lastRowY, at(positions, 'c3').y);
-  });
-
-  test('과목이 가장 적은 학년은 2학기를 1학기 바로 아래에 붙이고, 그 아래 빈 자리를 panel로 돌려준다', () => {
-    const positions = sample();
-    const { rowHeight, nodeHeight } = positions.dims;
-    assert.equal(secondHeader(positions, 1).y, at(positions, 'a1').y + rowHeight);
-    assert.equal(at(positions, 'a2').y, at(positions, 'a1').y + rowHeight * 2);
-    // 다른 학년과 같은 줄 격자 위 (화살표가 지나가는 틈이 어긋나지 않게)
-    assert.equal((at(positions, 'a2').y - at(positions, 'b1').y) % rowHeight, 0);
-    assert.deepEqual(positions.panel, {
-      year: 1,
-      x: at(positions, 'a1').x,
-      top: at(positions, 'a2').y + rowHeight / 2,
-      bottom: positions.lastRowY + nodeHeight / 2,
-    });
-  });
-
-  test('실제 데이터: 1학년 아래 빈 자리가 과목 정보 칸(panel)이 되고, 다른 과목과 겹치지 않는다', () => {
-    const positions = computePositions(loadRealCurriculum().courses);
-    const { panel } = positions;
-    assert.equal(panel.year, 1);
-    assert.ok(panel.bottom - panel.top > 600);
-    for (const [id, course] of positions.courses) {
-      if (course.x !== panel.x) continue;
-      assert.ok(course.y + NODE_HEIGHT / 2 <= panel.top, id);
-    }
-  });
-
-  test('섹션이 하나뿐이면 panel이 없다', () => {
-    assert.equal(computePositions([makeCourse({ id: 'a', recommendedTerm: '2-1' })]).panel, null);
+    const second = positions.headers.filter((header) => header.label === '2학기');
+    assert.equal(second.length, 2);
+    assert.equal(second[0].y, second[1].y);
+    assert.ok(second[0].y > at(positions, 'b3').y);
+    assert.equal(at(positions, 'a2').y, at(positions, 'b4').y);
+    assert.equal(positions.lastRowY, at(positions, 'a2').y);
   });
 
   test('학기를 정하지 않은 학년 과목("1")은 그 학년 섹션의 1학기 과목들 아래, 학기 미지정 표시', () => {
