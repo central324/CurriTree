@@ -330,3 +330,216 @@
   color: var(--color-warn);
   font-size: 14px;
 }
+
+/* 졸업요건 진행 현황 */
+.maker-degree-progress {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-line);
+}
+
+.maker-degree-progress-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.maker-degree-progress-heading h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.maker-degree-progress-heading p {
+  max-width: 360px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+}
+
+.maker-degree-progress-notice {
+  padding: 16px;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 총학점 및 전공학점 진행률 카드 */
+.maker-degree-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.maker-degree-credit-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.maker-degree-credit-card h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.maker-degree-credit-numbers {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--color-ink);
+}
+
+.maker-degree-credit-numbers strong {
+  font-size: 23px;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.maker-degree-credit-numbers span {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* 진행률 막대: 완료 학점 + 미래 예상 학점 */
+.maker-degree-credit-bar {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-line-soft);
+}
+
+.maker-degree-credit-bar-earned {
+  height: 100%;
+  background: var(--color-ok);
+}
+
+.maker-degree-credit-bar-future {
+  height: 100%;
+  background: var(--color-accent);
+  opacity: 0.45;
+}
+
+.maker-degree-credit-detail {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+}
+
+/* 전공필수 과목 현황 */
+.maker-degree-required {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.maker-degree-required h4 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.maker-degree-required-summary {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--color-ink-muted);
+}
+
+.maker-degree-required-counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.maker-degree-required-count {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.maker-degree-required-count strong {
+  font-size: 21px;
+  color: var(--color-ink);
+}
+
+.maker-degree-required-count span {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.maker-degree-required-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.maker-degree-required-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.maker-degree-required-item strong {
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.maker-degree-required-status {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+
+.maker-degree-progress-disclaimer {
+  margin-top: 20px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+}
+
+/* 작은 화면 */
+@media (max-width: 600px) {
+  .maker-degree-progress-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .maker-degree-progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .maker-degree-credit-card {
+    padding: 16px;
+  }
+
+  .maker-degree-required-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

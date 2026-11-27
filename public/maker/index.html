@@ -104,6 +104,66 @@
             <p><span id="projected-credits">0</span> 학점</p>
           </div>
         </div>
+        <!-- 졸업요건 진행 현황 -->
+        <div
+          class="maker-degree-progress"
+          aria-labelledby="maker-degree-progress-title"
+        >
+          <div class="maker-degree-progress-heading">
+            <h3 id="maker-degree-progress-title">
+              졸업요건 진행 현황
+            </h3>
+            <p>
+              현재 취득 학점과 수강 계획을 반영한 예상 학점을
+              구분하여 보여줍니다.
+            </p>
+          </div>
+
+          <!-- 검증 전, 미지원 학번, 오류 등의 안내 -->
+          <p
+            id="maker-degree-progress-notice"
+            class="maker-degree-progress-notice"
+            role="status"
+            aria-live="polite"
+          >
+            이수요건을 검증하면 진행 현황을 확인할 수 있습니다.
+          </p>
+
+          <!-- 검증이 완료된 경우에만 표시 -->
+          <div id="maker-degree-progress-content" hidden>
+
+            <!-- 총 졸업학점 / 전공학점 진행률 -->
+            <div
+              id="maker-degree-progress-credits"
+              class="maker-degree-progress-grid"
+            ></div>
+
+            <!-- 전공필수 과목별 이수 현황 -->
+            <div class="maker-degree-required">
+              <h4>전공필수 이수 현황</h4>
+
+              <p
+                id="maker-degree-required-summary"
+                class="maker-degree-required-summary"
+              ></p>
+
+              <div
+                id="maker-degree-required-counts"
+                class="maker-degree-required-counts"
+              ></div>
+
+              <ul
+                id="maker-degree-required-list"
+                class="maker-degree-required-list"
+              ></ul>
+            </div>
+
+            <p class="maker-degree-progress-disclaimer">
+              예상 학점에는 수강 중 및 수강 예정 과목이 포함됩니다.
+              실제 취득 학점이나 졸업 확정을 의미하지 않습니다.
+            </p>
+          </div>
+        </div>
       </section>
 
       <!-- 과목 추가 -->
