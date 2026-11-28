@@ -420,18 +420,13 @@ test('새 전달 실패 시 기존 계획과 입학년도 정보를 모두 유�
 });
 
 test('2022학번과 2023학번이 같은 교육과정을 사용할 수 있다', () => {
-  const sharedCurriculum = {
-    ...curriculum,
-    admissionYears: [2022, 2023],
-  };
-
   for (const admissionYear of [2022, 2023]) {
     const storage = createStorage();
     const plan = createPlan();
 
     saveMakerTransfer(storage, {
       plan,
-      curriculum: sharedCurriculum,
+      curriculum,
       admissionYear,
     });
 
@@ -448,7 +443,7 @@ test('2022학번과 2023학번이 같은 교육과정을 사용할 수 있다', 
       resolveTransferAdmissionYear(
         received.plan,
         received.admissionContext,
-        sharedCurriculum
+        curriculum
       ),
       admissionYear
     );
@@ -456,18 +451,13 @@ test('2022학번과 2023학번이 같은 교육과정을 사용할 수 있다', 
 });
 
 test('복수 입학년도 교육과정에서도 미지원 학번은 전달하지 않는다', () => {
-  const sharedCurriculum = {
-    ...curriculum,
-    admissionYears: [2022, 2023],
-  };
-
   for (const admissionYear of [2021, 2024, 2025]) {
     const storage = createStorage();
 
     assert.throws(
       () => saveMakerTransfer(storage, {
         plan: createPlan(),
-        curriculum: sharedCurriculum,
+        curriculum,
         admissionYear,
       }),
       TypeError
@@ -479,23 +469,18 @@ test('복수 입학년도 교육과정에서도 미지원 학번은 전달하지
 });
 
 test('2022학번 전달 이후 2023학번 전달 시 최신 입학년도를 사용한다', () => {
-  const sharedCurriculum = {
-    ...curriculum,
-    admissionYears: [2022, 2023],
-  };
-
   const storage = createStorage();
   const plan = createPlan();
 
   saveMakerTransfer(storage, {
     plan,
-    curriculum: sharedCurriculum,
+    curriculum,
     admissionYear: 2022,
   });
 
   saveMakerTransfer(storage, {
     plan,
-    curriculum: sharedCurriculum,
+    curriculum,
     admissionYear: 2023,
   });
 
@@ -508,7 +493,7 @@ test('2022학번 전달 이후 2023학번 전달 시 최신 입학년도를 사�
     resolveTransferAdmissionYear(
       received.plan,
       received.admissionContext,
-      sharedCurriculum
+      curriculum
     ),
     2023
   );
