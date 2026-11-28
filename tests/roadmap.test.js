@@ -79,12 +79,40 @@ describe('computePositions', () => {
     assert.equal(whole.year, 1);
   });
 
-  test('실제 데이터: 학년 섹션 4개, 공학설계입문은 1학년 섹션에 들어간다', () => {
+  test('실제 데이터: 학년 섹션 4개와 학기 미정 섹션을 표시한다', () => {
     const { courses } = loadRealCurriculum();
     const positions = computePositions(courses);
-    assert.equal(countColumns(courses), 4);
-    assert.deepEqual(positions.years.map((year) => year.label), ['1학년', '2학년', '3학년', '4학년']);
+
+    assert.equal(countColumns(courses), 5);
+
+    assert.deepEqual(
+      positions.years.map((year) => year.label),
+      ['1학년', '2학년', '3학년', '4학년', '학기 미정']
+    );
+
+    // 기존 공학설계입문은 1학년 섹션 유지
     assert.equal(at(positions, 'eng-design-intro').year, 1);
+
+    // 진로탐색및설계는 2학년, 학기 미지정 과목
+    assert.equal(at(positions, 'career-exploration-design').year, 2);
+    assert.equal(at(positions, 'career-exploration-design').wholeYear, true);
+
+    // 이산수학은 학기 미정 섹션에 배치
+    assert.equal(at(positions, 'discrete-mathematics').year, null);
+    assert.ok(
+      at(positions, 'discrete-mathematics').x >
+      positions.years.find((year) => year.year === 4).x
+    );
+    // 수치해석도 학기 미정 섹션에 배치
+    assert.equal(
+      at(positions, 'numerical-analysis').year,
+      null
+    );
+
+    assert.equal(
+      at(positions, 'numerical-analysis').x,
+      at(positions, 'discrete-mathematics').x
+    );
   });
 
   test('과목이 없는 학년은 빼고, 권장 학기가 null인 과목은 맨 오른쪽 "학기 미정" 섹션', () => {
