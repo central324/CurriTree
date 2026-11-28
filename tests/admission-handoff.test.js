@@ -9,6 +9,10 @@ import {
 } from '../public/klas/admission-handoff.js';
 
 import { loadRealCurriculum } from './helpers/curriculum.js';
+import { parseKlasText } from '../public/klas/parser.js';
+import { matchParsedCourses } from '../public/klas/matcher.js';
+import { buildMakerPlan } from '../public/klas/plan.js';
+import { validatePlan } from '../shared/maker/validation.js';
 
 const curriculum = loadRealCurriculum();
 
@@ -417,4 +421,261 @@ test('새 전달 실패 시 기존 계획과 입학년도 정보를 모두 유�
     underlying.getItem(ADMISSION_KEY),
     previousAdmission
   );
+});
+
+test('2022학번과 2023학번이 같은 교육과정을 사용할 수 있다', () => {
+  for (const admissionYear of [2022, 2023]) {
+    const storage = createStorage();
+    const plan = createPlan();
+
+    saveMakerTransfer(storage, {
+      plan,
+      curriculum,
+      admissionYear,
+    });
+
+    const received = consumeMakerTransfer(storage);
+
+    assert.deepEqual(received.plan, plan);
+
+    assert.deepEqual(received.admissionContext, {
+      curriculumId: curriculum.curriculumId,
+      admissionYear,
+    });
+
+    assert.equal(
+      resolveTransferAdmissionYear(
+        received.plan,
+        received.admissionContext,
+        curriculum
+      ),
+      admissionYear
+    );
+  }
+});
+
+test('복수 입학년도 교육과정에서도 미지원 학번은 전달하지 않는다', () => {
+  for (const admissionYear of [2021, 2024, 2025]) {
+    const storage = createStorage();
+
+    assert.throws(
+      () => saveMakerTransfer(storage, {
+        plan: createPlan(),
+        curriculum,
+        admissionYear,
+      }),
+      TypeError
+    );
+
+    assert.equal(storage.getItem(PLAN_KEY), null);
+    assert.equal(storage.getItem(ADMISSION_KEY), null);
+  }
+});
+
+test('2022학번 전달 이후 2023학번 전달 시 최신 입학년도를 사용한다', () => {
+  const storage = createStorage();
+  const plan = createPlan();
+
+  saveMakerTransfer(storage, {
+    plan,
+    curriculum,
+    admissionYear: 2022,
+  });
+
+  saveMakerTransfer(storage, {
+    plan,
+    curriculum,
+    admissionYear: 2023,
+  });
+
+  const received = consumeMakerTransfer(storage);
+
+  assert.deepEqual(received.plan, plan);
+  assert.equal(received.admissionContext.admissionYear, 2023);
+
+  assert.equal(
+    resolveTransferAdmissionYear(
+      received.plan,
+      received.admissionContext,
+      curriculum
+    ),
+    2023
+  );
+});
+
+// KLAS 텍스트를 분석하고 수강 계획과 입학년도를 전달합니다.
+function transferKlasHistory(rawText, admissionYear) {
+  const parsed = parseKlasText(rawText, {
+    currentTermId: '2026-2',
+  });
+
+  const majorRows = parsed.courses.filter(
+    (course) =>
+      course.category === 'major_required' ||
+      course.category === 'major_elective'
+  );
+
+  const matched = matchParsedCourses(
+    majorRows,
+    curriculum
+  );
+
+  const matchedMap = new Map(
+    matched.courses.map((course) => [
+      course.clientRowId,
+      course,
+    ])
+  );
+
+  const rows = parsed.courses.map(
+    (course) =>
+      matchedMap.get(course.clientRowId) ?? course
+  );
+
+  const { plan } = buildMakerPlan(rows, curriculum);
+  const storage = createStorage();
+
+  saveMakerTransfer(storage, {
+    plan,
+    curriculum,
+    admissionYear,
+  });
+
+  const received = consumeMakerTransfer(storage);
+
+  const resolvedYear = resolveTransferAdmissionYear(
+    received.plan,
+    received.admissionContext,
+    curriculum
+  );
+
+  return {
+    parsed,
+    matched,
+    plan: received.plan,
+    admissionYear: resolvedYear,
+    validation: validatePlan(received.plan, curriculum),
+  };
+}
+
+// 과목명 기반 매칭을 위한 가상 KLAS 수강 기록
+function historyRow(name, category, credits, grade = 'A0') {
+  return [
+    '',
+    name,
+    '컴퓨터정보공학부',
+    category,
+    String(credits),
+    grade,
+    '',
+    '',
+    '',
+  ].join('\t');
+}
+
+test('2022학번의 과거 취득 학점은 현재 교육과정 학점으로 덮어쓰지 않는다', () => {
+  const rawText = [
+    '2022학년도 1학기',
+    historyRow('컴퓨터공학입문세미나', '전선', 1),
+    '2023학년도 2학기',
+    historyRow('데이터구조실습', '전선', 2),
+  ].join('\n');
+
+  const result = transferKlasHistory(rawText, 2022);
+
+  assert.deepEqual(result.parsed.warnings, []);
+  assert.deepEqual(result.matched.reviewIssues, []);
+
+  assert.equal(result.admissionYear, 2022);
+  assert.equal(result.plan.curriculumId, 'ce-2023');
+  assert.equal(result.plan.schemaVersion, 1);
+
+  assert.deepEqual(result.plan.completedCourses, [
+    {
+      courseId: 'cs-intro-seminar',
+      termId: '2022-1',
+      earnedCredits: 1,
+    },
+    {
+      courseId: 'data-structure-lab',
+      termId: '2023-2',
+      earnedCredits: 2,
+    },
+  ]);
+
+  assert.equal(result.plan.reviewPendingCount, 0);
+  assert.equal(result.validation.summary.earnedTotalCredits, 3);
+  assert.equal(result.validation.summary.earnedMajorCredits, 3);
+  assert.equal(result.validation.summary.projectedMajorCredits, 3);
+});
+
+test('2022학번의 과거 과목명도 기존 교육과정의 별칭으로 매칭된다', () => {
+  const rawText = [
+    '2024학년도 2학기',
+    historyRow('하드웨어소프트웨어통합설계', '전선', 3),
+    '2025학년도 1학기',
+    historyRow('시스템반도체설계및응용', '전선', 3),
+    '2025학년도 2학기',
+    historyRow('데이터베이스및응용', '전선', 3),
+  ].join('\n');
+
+  const result = transferKlasHistory(rawText, 2022);
+
+  assert.deepEqual(result.parsed.warnings, []);
+  assert.deepEqual(result.matched.reviewIssues, []);
+  assert.equal(result.admissionYear, 2022);
+
+  assert.deepEqual(
+    result.plan.completedCourses.map(
+      (course) => course.courseId
+    ),
+    [
+      'hw-sw-codesign',
+      'ai-soc-design',
+      'db-visualization',
+    ]
+  );
+
+  assert.equal(result.plan.reviewPendingCount, 0);
+  assert.equal(result.validation.summary.earnedTotalCredits, 9);
+  assert.equal(result.validation.summary.earnedMajorCredits, 9);
+});
+
+test('2022학번 지원 확대 이후에도 2023학번의 학점 계산 결과를 유지한다', () => {
+  const rawText = [
+    '2023학년도 1학기',
+    historyRow('컴퓨터공학입문세미나', '전선', 2),
+    '2024학년도 2학기',
+    historyRow('데이터구조실습', '전선', 1),
+    '2026학년도 2학기',
+    historyRow('이산수학', '전선', 3, ''),
+  ].join('\n');
+
+  const result = transferKlasHistory(rawText, 2023);
+
+  assert.deepEqual(result.parsed.warnings, []);
+  assert.deepEqual(result.matched.reviewIssues, []);
+
+  assert.equal(result.admissionYear, 2023);
+  assert.equal(result.plan.reviewPendingCount, 0);
+
+  assert.deepEqual(
+    result.plan.completedCourses.map(
+      (course) => course.earnedCredits
+    ),
+    [2, 1]
+  );
+
+  assert.deepEqual(result.plan.inProgressCourses, [
+    {
+      courseId: 'discrete-mathematics',
+      termId: '2026-2',
+    },
+  ]);
+
+  assert.equal(result.validation.summary.earnedTotalCredits, 3);
+  assert.equal(result.validation.summary.earnedMajorCredits, 3);
+  assert.equal(result.validation.summary.inProgressCredits, 3);
+  assert.equal(result.validation.summary.projectedTotalCredits, 6);
+  assert.equal(result.validation.summary.projectedMajorCredits, 6);
 });

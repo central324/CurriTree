@@ -53,21 +53,32 @@ test('적용 입학년도 안내 영역이 존재한다', () => {
 });
 
 // 3. 실제 교육과정 지원 여부
-test('실제 2023학번 교육과정의 지원 여부를 판단한다', () => {
-  assert.deepEqual(curriculum.admissionYears, [2023]);
+test('실제 교육과정은 2022학번과 2023학번을 지원한다', () => {
+  assert.deepEqual(curriculum.admissionYears, [2022, 2023]);
 
-  const supported = getAdmissionYearSupport({
-    admissionYear: 2023,
-    admissionYears: curriculum.admissionYears,
-  });
+  for (const admissionYear of [2022, 2023]) {
+    const result = getAdmissionYearSupport({
+      admissionYear,
+      admissionYears: curriculum.admissionYears,
+    });
 
-  const unsupported = getAdmissionYearSupport({
-    admissionYear: 2024,
-    admissionYears: curriculum.admissionYears,
-  });
+    assert.equal(result.status, 'supported');
+    assert.equal(result.admissionYear, admissionYear);
+    assert.deepEqual(result.supportedYears, [2022, 2023]);
+  }
+});
 
-  assert.equal(supported.status, 'supported');
-  assert.equal(unsupported.status, 'unsupported');
+test('지원 범위에 포함되지 않은 학번은 계속 차단한다', () => {
+  for (const admissionYear of [2021, 2024, 2025, 2026]) {
+    const result = getAdmissionYearSupport({
+      admissionYear,
+      admissionYears: curriculum.admissionYears,
+    });
+
+    assert.equal(result.status, 'unsupported');
+    assert.equal(result.admissionYear, admissionYear);
+    assert.deepEqual(result.supportedYears, [2022, 2023]);
+  }
 });
 
 // 4. 공통 함수 사용
@@ -183,4 +194,10 @@ test('변경된 입학년도에는 이전 검증 결과를 적용하지 않는�
     handler,
     /catch \(error\)\s*\{\s*if \(isCurrentMakerRequest\(requestScope\)\)/
   );
+});
+
+test('2022학번에게 공통 교육과정 적용 범위와 주의사항을 안내한다', () => {
+  assert.match(script, /support\.admissionYear === 2022/);
+  assert.match(script, /2023학년도 기준 교육과정을 공통 적용/);
+  assert.match(script, /실제 졸업요건은 별도로 확인/);
 });

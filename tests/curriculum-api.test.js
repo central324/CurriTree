@@ -45,7 +45,7 @@ describe('실제 데이터로 실행한 서버', () => {
           id: 'ce',
           name: '컴퓨터정보공학부',
           defaultCurriculumId: 'ce-2023',
-          curricula: [{ id: 'ce-2023', catalogYear: 2023, admissionYears: [2023], isDemo: false }],
+          curricula: [{ id: 'ce-2023', catalogYear: 2023, admissionYears: [2022, 2023], isDemo: false }],
         },
       ],
     });
@@ -53,8 +53,13 @@ describe('실제 데이터로 실행한 서버', () => {
 
   test('GET /api/curriculum/ce는 기본 교육과정 JSON을 그대로 반환한다', async () => {
     const result = await getJson(`${server.url}/api/curriculum/ce`);
+
     assert.equal(result.status, 200);
     assert.deepEqual(result.body, loadRealCurriculum());
+
+    assert.equal(result.body.curriculumId, 'ce-2023');
+    assert.equal(result.body.catalogYear, 2023);
+    assert.deepEqual(result.body.admissionYears, [2022, 2023]);
   });
 
   test('curriculumId를 지정해도 같은 교육과정을 반환한다', async () => {

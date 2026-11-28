@@ -29,7 +29,7 @@ test('문자열 입학년도도 정상 처리한다', () => {
   assert.equal(result.admissionYear, 2023);
 });
 
-test('2022학번과 2024학번은 미지원으로 판단한다', () => {
+test('2023학번만 지원하는 교육과정에서는 2022학번과 2024학번을 차단한다', () => {
   for (const year of [2022, 2024]) {
     const result = check(year);
 
