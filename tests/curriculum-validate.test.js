@@ -10,6 +10,7 @@ const fieldsOf = (data) => validateCurriculum(data).map((error) => error.field);
 const supplementalCourseIds = new Set([
   'discrete-mathematics',
   'career-exploration-design',
+  'numerical-analysis',
 ]);
 
 describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
@@ -47,6 +48,12 @@ describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
         courseCode: 'I020-2-1234',
         credits: 1,
       },
+      {
+        id: 'numerical-analysis',
+        name: '수치해석',
+        courseCode: '7000-3-0875',
+        credits: 3,
+      },
     ];
 
     for (const expected of expectedCourses) {
@@ -63,10 +70,20 @@ describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
     }
   });
 
-  test('공학설계입문은 1학년 과목(학기 무관)으로 분류한다', () => {
-    const course = data.courses.find((item) => item.id === 'eng-design-intro');
+  test('공학설계입문은 1학년 전공선택 3학점 과목이다', () => {
+    const course = data.courses.find(
+      (item) => item.id === 'eng-design-intro'
+    );
+
+    assert.ok(course);
     assert.equal(course.recommendedTerm, '1');
     assert.deepEqual(course.offeredTerms, ['1', '2']);
+    assert.equal(course.category, 'major_elective');
+    assert.equal(course.credits, 3);
+
+    assert.ok(
+      !data.requirements.requiredCourseIds.includes(course.id)
+    );
   });
 
   test('기존 로드맵 과목에는 하나 이상의 진로 태그가 있다', () => {

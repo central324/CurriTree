@@ -294,3 +294,117 @@ test('이산수학 F 및 진로탐색및설계 NP 기록은 학점에 포함하�
   assert.equal(validation.summary.projectedMajorCredits, 0);
   assert.equal(plan.reviewPendingCount, 0);
 });
+
+test('수치해석 전공선택 기록은 매칭 후 전공학점에 반영한다', () => {
+  // 가상의 수강 이력으로 매칭 및 학점 계산을 검증
+  const rawText = [
+    '2025학년도 2학기',
+    klasRow(
+      '7000-3-0875-01',
+      '수치해석',
+      '전선',
+      3,
+      'A0'
+    ),
+  ].join('\n');
+
+  const { rows, plan, validation } =
+    processKlasText(rawText);
+
+  assert.deepEqual(rows[0].match, {
+    status: 'exact',
+    courseId: 'numerical-analysis',
+  });
+
+  assert.deepEqual(plan.completedCourses, [
+    {
+      courseId: 'numerical-analysis',
+      termId: '2025-2',
+      earnedCredits: 3,
+    },
+  ]);
+
+  assert.equal(plan.reviewPendingCount, 0);
+  assert.equal(validation.summary.earnedTotalCredits, 3);
+  assert.equal(validation.summary.earnedMajorCredits, 3);
+  assert.equal(validation.summary.projectedMajorCredits, 3);
+});
+
+test('과거 기초교양으로 이수한 수치해석은 전공학점에 포함하지 않는다', () => {
+  const rawText = [
+    '2023학년도 2학기',
+    klasRow(
+      '7000-3-0875-01',
+      '수치해석',
+      '기선',
+      3,
+      'B+'
+    ),
+  ].join('\n');
+
+  const { matched, plan, validation } =
+    processKlasText(rawText);
+
+  assert.equal(matched.courses.length, 0);
+  assert.deepEqual(plan.completedCourses, []);
+  assert.equal(plan.otherEarnedCredits.foundation_elective, 3);
+  assert.equal(plan.reviewPendingCount, 0);
+
+  assert.equal(validation.summary.earnedTotalCredits, 3);
+  assert.equal(validation.summary.earnedMajorCredits, 0);
+  assert.equal(validation.summary.projectedMajorCredits, 0);
+});
+
+test('공학설계입문 전공선택 이수 기록은 전공학점 3학점으로 반영한다', () => {
+  const rawText = [
+    '2023학년도 1학기',
+    klasRow(
+      'I000-1-2957-01',
+      '공학설계입문',
+      '전선',
+      3,
+      'A0'
+    ),
+  ].join('\n');
+
+  const { rows, plan, validation } =
+    processKlasText(rawText);
+
+  assert.deepEqual(rows[0].match, {
+    status: 'exact',
+    courseId: 'eng-design-intro',
+  });
+
+  assert.equal(plan.completedCourses.length, 1);
+  assert.equal(plan.completedCourses[0].earnedCredits, 3);
+  assert.equal(plan.reviewPendingCount, 0);
+
+  assert.equal(validation.summary.earnedTotalCredits, 3);
+  assert.equal(validation.summary.earnedMajorCredits, 3);
+  assert.equal(validation.summary.projectedMajorCredits, 3);
+});
+
+test('기초교양필수로 기록된 공학설계입문은 전공학점으로 변경하지 않는다', () => {
+  const rawText = [
+    '2021학년도 2학기',
+    klasRow(
+      'I000-1-2957-01',
+      '공학설계입문',
+      '기필',
+      3,
+      'A0'
+    ),
+  ].join('\n');
+
+  const { matched, plan, validation } =
+    processKlasText(rawText);
+
+  assert.equal(matched.courses.length, 0);
+  assert.deepEqual(plan.completedCourses, []);
+  assert.equal(plan.otherEarnedCredits.foundation_required, 3);
+  assert.equal(plan.reviewPendingCount, 0);
+
+  assert.equal(validation.summary.earnedTotalCredits, 3);
+  assert.equal(validation.summary.earnedMajorCredits, 0);
+  assert.equal(validation.summary.projectedMajorCredits, 0);
+});

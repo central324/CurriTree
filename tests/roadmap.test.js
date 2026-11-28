@@ -103,6 +103,16 @@ describe('computePositions', () => {
       at(positions, 'discrete-mathematics').x >
       positions.years.find((year) => year.year === 4).x
     );
+    // 수치해석도 학기 미정 섹션에 배치
+    assert.equal(
+      at(positions, 'numerical-analysis').year,
+      null
+    );
+
+    assert.equal(
+      at(positions, 'numerical-analysis').x,
+      at(positions, 'discrete-mathematics').x
+    );
   });
 
   test('과목이 없는 학년은 빼고, 권장 학기가 null인 과목은 맨 오른쪽 "학기 미정" 섹션', () => {
