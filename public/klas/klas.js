@@ -169,7 +169,11 @@ function renderAdmissionScope() {
     case 'supported':
       admissionScope.textContent =
         `${prefix}. 입력한 ${support.admissionYear}학번은 ` +
-        '지원 대상입니다.';
+        '지원 대상입니다.' +
+        (support.admissionYear === 2022
+          ? ' 2023학년도 기준 교육과정을 공통 적용하며, ' +
+            '과거 교과목 정보는 실제 수강 이력을 확인해주세요.'
+          : '');
 
       admissionScope.classList.add(
         'klas__admission-scope--supported'
@@ -1354,9 +1358,11 @@ function renderResults(parsed, matched, curriculum) {
     createTextElement(
       'p',
       'klas__result-scope',
-      `${curriculum.department.name} · ${appliedYears} 교육과정을 ` +
-      '기준으로 분석했습니다. 실제 졸업요건은 학교의 공식 ' +
-      '학사 자료와 함께 확인해주세요.'
+      `${curriculum.department.name} · ` +
+      `${curriculum.catalogYear}학년도 기준 교육과정 ` +
+      `(적용 입학년도: ${appliedYears})으로 분석했습니다. ` +
+      '수강 시기에 따라 과목명, 학점 및 이수구분이 다를 수 있습니다. ' +
+      '실제 졸업요건은 학교의 공식 학사 자료와 함께 확인해주세요.'
     )
   );
 

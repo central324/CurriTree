@@ -195,3 +195,9 @@ test('변경된 입학년도에는 이전 검증 결과를 적용하지 않는�
     /catch \(error\)\s*\{\s*if \(isCurrentMakerRequest\(requestScope\)\)/
   );
 });
+
+test('2022학번에게 공통 교육과정 적용 범위와 주의사항을 안내한다', () => {
+  assert.match(script, /support\.admissionYear === 2022/);
+  assert.match(script, /2023학년도 기준 교육과정을 공통 적용/);
+  assert.match(script, /실제 졸업요건은 별도로 확인/);
+});

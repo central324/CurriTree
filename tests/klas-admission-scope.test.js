@@ -59,3 +59,20 @@ test('분석 결과에 적용 교육과정을 표시한다', () => {
   assert.match(script, /klas__result-scope/);
   assert.match(script, /실제 졸업요건은 학교의 공식/);
 });
+
+test('2022학번에게 공통 교육과정 적용 범위를 안내한다', () => {
+  assert.match(script, /support\.admissionYear === 2022/);
+  assert.match(script, /2023학년도 기준 교육과정을 공통 적용/);
+});
+
+test('분석 결과에 교육과정 기준 연도와 적용 입학년도를 구분하여 표시한다', () => {
+  assert.match(
+    script,
+    /\$\{curriculum\.catalogYear\}학년도 기준 교육과정/
+  );
+
+  assert.match(
+    script,
+    /적용 입학년도: \$\{appliedYears\}/
+  );
+});

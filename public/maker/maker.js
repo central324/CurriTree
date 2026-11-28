@@ -176,7 +176,11 @@ function renderAdmissionScope() {
     case "supported":
       admissionScope.textContent =
         `${prefix}. 입력한 ${support.admissionYear}학번은 ` +
-        "지원 대상입니다. 이수요건을 검증할 수 있습니다.";
+        "지원 대상입니다. 이수요건을 검증할 수 있습니다." +
+        (support.admissionYear === 2022
+          ? " 2023학년도 기준 교육과정을 공통 적용하며, " +
+            "과거 교과목 정보 및 실제 졸업요건은 별도로 확인해주세요."
+          : "");
 
       admissionScope.classList.add(
         "maker-admission-scope--supported"
