@@ -1000,6 +1000,40 @@
         "semiconductor-iot",
         "hw-sw-convergence"
       ]
+    },
+    {
+      "id": "discrete-mathematics",
+      "name": "이산수학",
+      "aliases": [],
+      "courseCodes": [
+        "I000-2-1186"
+      ],
+      "credits": 3,
+      "category": "major_elective",
+      "recommendedTerm": null,
+      "offeredTerms": null,
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": []
+    },
+    {
+      "id": "career-exploration-design",
+      "name": "진로탐색및설계",
+      "aliases": [
+        "진로탐색 및 설계"
+      ],
+      "courseCodes": [
+        "I020-2-1234"
+      ],
+      "credits": 1,
+      "category": "major_elective",
+      "recommendedTerm": "2",
+      "offeredTerms": null,
+      "hardPrerequisiteIds": null,
+      "recommendedPreviousIds": [],
+      "linkedCourseIds": [],
+      "tags": []
     }
   ],
   "requirements": {

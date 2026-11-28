@@ -6,6 +6,11 @@ import { loadRealCurriculum, makeCourse, makeCurriculum } from './helpers/curric
 
 const reasons = (data) => validateCurriculum(data).map((error) => `${error.field}: ${error.reason}`);
 const fieldsOf = (data) => validateCurriculum(data).map((error) => error.field);
+// 기존 2023학년도 교과과정표 외에 추가로 확인된 과목
+const supplementalCourseIds = new Set([
+  'discrete-mathematics',
+  'career-exploration-design',
+]);
 
 describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
   const data = loadRealCurriculum();
@@ -14,13 +19,48 @@ describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
     assert.deepEqual(reasons(data), []);
   });
 
-  test('2023학년도 교과과정표 42과목·113학점 + 공학설계입문(이수체계도 필수 선수)', () => {
-    const tableCourses = data.courses.filter((course) => course.id !== 'eng-design-intro');
+  test('기존 2023학년도 교과과정표 42과목·113학점을 유지한다', () => {
+    const tableCourses = data.courses.filter(
+      (course) =>
+        course.id !== 'eng-design-intro' &&
+        !supplementalCourseIds.has(course.id)
+    );
+
     assert.equal(tableCourses.length, 42);
     assert.equal(
       tableCourses.reduce((sum, course) => sum + course.credits, 0),
       113,
     );
+  });
+
+  test('보완된 전공선택 과목의 학정번호와 학점이 올바르다', () => {
+    const expectedCourses = [
+      {
+        id: 'discrete-mathematics',
+        name: '이산수학',
+        courseCode: 'I000-2-1186',
+        credits: 3,
+      },
+      {
+        id: 'career-exploration-design',
+        name: '진로탐색및설계',
+        courseCode: 'I020-2-1234',
+        credits: 1,
+      },
+    ];
+
+    for (const expected of expectedCourses) {
+      const course = data.courses.find(
+        (item) => item.id === expected.id
+      );
+
+      assert.ok(course, expected.id);
+      assert.equal(course.name, expected.name);
+      assert.ok(course.courseCodes.includes(expected.courseCode));
+      assert.equal(course.credits, expected.credits);
+      assert.equal(course.category, 'major_elective');
+      assert.ok(!data.requirements.requiredCourseIds.includes(course.id));
+    }
   });
 
   test('공학설계입문은 1학년 과목(학기 무관)으로 분류한다', () => {
@@ -29,8 +69,14 @@ describe('실제 교육과정 데이터 (data/curricula/ce-2023.json)', () => {
     assert.deepEqual(course.offeredTerms, ['1', '2']);
   });
 
-  test('26년 로드맵에 없는 인공지능프로그래밍 외에는 모두 3개 트랙 중 하나 이상에 속한다', () => {
-    for (const course of data.courses.filter((item) => item.id !== 'ai-programming')) {
+  test('기존 로드맵 과목에는 하나 이상의 진로 태그가 있다', () => {
+    const roadmapCourses = data.courses.filter(
+      (course) =>
+        course.id !== 'ai-programming' &&
+        !supplementalCourseIds.has(course.id)
+    );
+
+    for (const course of roadmapCourses) {
       assert.ok(course.tags.length > 0, course.id);
     }
   });
