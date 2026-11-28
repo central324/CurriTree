@@ -418,3 +418,98 @@ test('새 전달 실패 시 기존 계획과 입학년도 정보를 모두 유�
     previousAdmission
   );
 });
+
+test('2022학번과 2023학번이 같은 교육과정을 사용할 수 있다', () => {
+  const sharedCurriculum = {
+    ...curriculum,
+    admissionYears: [2022, 2023],
+  };
+
+  for (const admissionYear of [2022, 2023]) {
+    const storage = createStorage();
+    const plan = createPlan();
+
+    saveMakerTransfer(storage, {
+      plan,
+      curriculum: sharedCurriculum,
+      admissionYear,
+    });
+
+    const received = consumeMakerTransfer(storage);
+
+    assert.deepEqual(received.plan, plan);
+
+    assert.deepEqual(received.admissionContext, {
+      curriculumId: curriculum.curriculumId,
+      admissionYear,
+    });
+
+    assert.equal(
+      resolveTransferAdmissionYear(
+        received.plan,
+        received.admissionContext,
+        sharedCurriculum
+      ),
+      admissionYear
+    );
+  }
+});
+
+test('복수 입학년도 교육과정에서도 미지원 학번은 전달하지 않는다', () => {
+  const sharedCurriculum = {
+    ...curriculum,
+    admissionYears: [2022, 2023],
+  };
+
+  for (const admissionYear of [2021, 2024, 2025]) {
+    const storage = createStorage();
+
+    assert.throws(
+      () => saveMakerTransfer(storage, {
+        plan: createPlan(),
+        curriculum: sharedCurriculum,
+        admissionYear,
+      }),
+      TypeError
+    );
+
+    assert.equal(storage.getItem(PLAN_KEY), null);
+    assert.equal(storage.getItem(ADMISSION_KEY), null);
+  }
+});
+
+test('2022학번 전달 이후 2023학번 전달 시 최신 입학년도를 사용한다', () => {
+  const sharedCurriculum = {
+    ...curriculum,
+    admissionYears: [2022, 2023],
+  };
+
+  const storage = createStorage();
+  const plan = createPlan();
+
+  saveMakerTransfer(storage, {
+    plan,
+    curriculum: sharedCurriculum,
+    admissionYear: 2022,
+  });
+
+  saveMakerTransfer(storage, {
+    plan,
+    curriculum: sharedCurriculum,
+    admissionYear: 2023,
+  });
+
+  const received = consumeMakerTransfer(storage);
+
+  assert.deepEqual(received.plan, plan);
+  assert.equal(received.admissionContext.admissionYear, 2023);
+
+  assert.equal(
+    resolveTransferAdmissionYear(
+      received.plan,
+      received.admissionContext,
+      sharedCurriculum
+    ),
+    2023
+  );
+});
